@@ -8,7 +8,7 @@ const PDFDocument = require("pdfkit"); // Import the pdfkit library
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const firebase = require("firebase/app");
-require("firebase/firestore");
+const firestore = require("@firebase/firestore");
 const { getFirestore, doc, updateDoc, getDoc } = require("@firebase/firestore");
 
 const firebaseConfig = {
@@ -321,16 +321,17 @@ app.get("/generatePdf", async (request, response) => {
 
     doc.moveDown(0.4);
 
-    doc
-      .fillColor("#000000")
-      .font(fontBold)
-      .fontSize(18)
-      .text("Bill To", { align: "start" })
-      .fontSize(12)
-      .font(fontNormal)
-      .text(confirmedOrder.name)
-      .text(confirmedOrder.businessName)
-      .text(confirmedOrder.confirmedDeliveryAddress);
+    // TODO: Needs to fix `confirmedOrder` is undefined here.
+    // doc
+    //   .fillColor("#000000")
+    //   .font(fontBold)
+    //   .fontSize(18)
+    //   .text("Bill To", { align: "start" })
+    //   .fontSize(12)
+    //   .font(fontNormal)
+    //   .text(confirmedOrder.name)
+    //   .text(confirmedOrder.businessName)
+    //   .text(confirmedOrder.confirmedDeliveryAddress);
 
     doc
       .fillColor("#000000")
