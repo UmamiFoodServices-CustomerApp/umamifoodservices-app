@@ -8,8 +8,16 @@ const PDFDocument = require("pdfkit"); // Import the pdfkit library
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const firebase = require("firebase/app");
-require("firebase/firestore");
+const firestore = require("@firebase/firestore");
 const { getFirestore, doc, updateDoc, getDoc } = require("@firebase/firestore");
+
+const {
+  getItemQuantity,
+  getItemName,
+  formatMoney,
+  getItemFinalAmount,
+  getItemRate,
+} = require("./utils/order");
 
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_APIKEY,
@@ -242,44 +250,13 @@ function sendErrorMessage(errors, response) {
 
 app.get("/generatePdf", async (request, response) => {
   try {
-    const order = request.query || {};
-    const items = JSON.parse(order.item_data || {});
-    const confirmedOrder = JSON.parse(order.order_detail || {});
+    const orderId = request.query.orderId;
 
-    const getQuantity = (item) => {
-      if (item.primaryQuantity > 0 && item.secondaryQuantity === 0) {
-        return item.primaryQuantity;
-      }
-      if (item.secondaryQuantity > 0 && item.primaryQuantity === 0) {
-        return item.secondaryQuantity;
-      }
-      if (item.secondaryQuantity > 0 && item.primaryQuantity > 0) {
-        return `${item.primaryQuantity}/${item.secondaryQuantity}`;
-      }
-    };
-
-    const getSoldByValue = (item) => {
-      if (item.primaryQuantity > 0 && item.secondaryQuantity === 0) {
-        return "Case - ";
-      }
-      if (item.secondaryQuantity > 0 && item.primaryQuantity === 0) {
-        return "Unit - ";
-      }
-      return "Case / Unit - ";
-    };
-
-    const getValue = (item) => {
-      const qty = getQuantity(item);
-      return qty * (item.CustomerPrice || item.CustomerUnitPrice);
-    };
-
-    const getTotalPrice = () => {
-      let sum = 0;
-      items.forEach((item) => {
-        sum += getValue(item);
-      });
-      return sum.toFixed(2);
-    };
+    const orderSnap = await firestore.getDoc(
+      firestore.doc(db, "completed", orderId)
+    );
+    const order = orderSnap.data();
+    const items = order.items;
 
     const todayDate = () => {
       const currentDate = new Date();
@@ -324,9 +301,9 @@ app.get("/generatePdf", async (request, response) => {
       .text("Bill To", { align: "start" })
       .fontSize(12)
       .font(fontNormal)
-      .text(confirmedOrder.name)
-      .text(confirmedOrder.businessName)
-      .text(confirmedOrder.confirmedDeliveryAddress);
+      .text(order.name)
+      .text(order.businessName)
+      .text(order.confirmedDeliveryAddress);
 
     doc
       .fillColor("#000000")
@@ -349,7 +326,7 @@ app.get("/generatePdf", async (request, response) => {
     doc.rect(50, 310, 520, 24).fill("#ffe8cc").stroke("#fd8c02");
     doc.fillColor("#fd8c02").font(fontBold).text("QTY", 60, 317, { width: 90 });
     doc.font(fontBold).text("ITEMS", 110, 317, { width: 300 });
-    doc.font(fontBold).text("RATE", 400, 317, { width: 200 });
+    doc.font(fontBold).text("RATE", 420, 317, { width: 90 });
     doc.font(fontBold).text("AMOUNT", 500, 317, { width: 100 });
 
     let itemNo = 1;
@@ -358,14 +335,12 @@ app.get("/generatePdf", async (request, response) => {
       doc
         .fillColor("#000")
         .font(fontNormal)
-        .text(getQuantity(item), 60, y, { width: 90 });
+        .text(getItemQuantity(item), 60, y, { width: 90 });
+      doc.font(fontNormal).text(getItemName(item), 110, y, { width: 300 });
+      doc.font(fontNormal).text(getItemRate(item), 420, y, { width: 90 });
       doc
         .font(fontNormal)
-        .text(`${getSoldByValue(item)}${item.Name}`, 110, y, { width: 300 });
-      doc.font(fontNormal).text("", 400, y, { width: 100 });
-      doc
-        .font(fontNormal)
-        .text(`$${getValue(item).toFixed(2)}`, 500, y, { width: 100 });
+        .text(formatMoney(getItemFinalAmount(item)), 500, y, { width: 100 });
       itemNo++;
     });
 
@@ -383,7 +358,9 @@ app.get("/generatePdf", async (request, response) => {
     doc.font(fontBold).text("TOTAL", 400, 330 + itemNo * 20);
     doc
       .font(fontBold)
-      .text(`$${getTotalPrice()}`, 500, 330 + itemNo * 20, { width: 100 });
+      .text(formatMoney(order.totalCost), 500, 330 + itemNo * 20, {
+        width: 100,
+      });
 
     doc.end();
 
