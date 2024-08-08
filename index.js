@@ -7,9 +7,7 @@ const bodyParser = require("body-parser");
 const PDFDocument = require("pdfkit"); // Import the pdfkit library
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-const firebase = require("firebase/app");
-const firestore = require("@firebase/firestore");
-const { getFirestore, doc, updateDoc, getDoc } = require("@firebase/firestore");
+const firebaseAdmin = require("firebase-admin");
 
 const {
   getItemQuantity,
@@ -19,19 +17,26 @@ const {
   getItemRate,
 } = require("./utils/order");
 
-const firebaseConfig = {
-  apiKey: process.env.FIREBASE_APIKEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-  databaseURL: process.env.FIREBASE_DATABASE_URL,
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID,
-  measurementId: process.env.FIREBASE_MEASUREMENT_ID,
+const serviceAccount = {
+  type: "service_account",
+  universe_domain: "googleapis.com",
+  project_id: process.env.FIREBASE_PROJECT_ID,
+  private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+  private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+  client_email: process.env.FIREBASE_CLIENT_EMAIL,
+  client_id: process.env.FIREBASE_CLIENT_ID,
+  auth_uri: process.env.FIREBASE_AUTH_URI,
+  token_uri: process.env.FIREBASE_TOKEN_URI,
+  auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
+  client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
 };
 
-firebase.initializeApp(firebaseConfig);
-const db = getFirestore();
+firebaseAdmin.initializeApp({
+  credential: firebaseAdmin.credential.cert(serviceAccount),
+  databaseURL: process.env.FIREBASE_DATABASE_URL,
+});
+
+const db = firebaseAdmin.firestore();
 
 const fs = require("fs");
 const path = require("path");
@@ -252,10 +257,10 @@ app.get("/generatePdf", async (request, response) => {
   try {
     const orderId = request.query.orderId;
 
-    const orderSnap = await firestore.getDoc(
-      firestore.doc(db, "completed", orderId)
-    );
-    const order = orderSnap.data();
+    const orderDocRef = db.collection("completed").doc(orderId);
+    const orderSnap = await orderDocRef.get();
+
+    const order = orderSnap?.data?.();
     const items = order.items;
 
     const todayDate = () => {
@@ -587,12 +592,14 @@ app.post("/stripe-webhook", async (req, res) => {
       type === "payment_intent.succeeded" ||
       type === "invoice.payment_succeeded"
     ) {
-      const orderSnap = await getDoc(doc(db, "confirmed", orderId));
-      const order = orderSnap.data();
+      const orderDocRef = db.collection("confirmed").doc(orderId);
+      const orderSnap = await orderDocRef.get();
+      const order = orderSnap?.data?.();
+
       const paymentSelected = order.paymentSelected;
 
       if (paymentSelected === "ACH") {
-        const docRef = doc(db, "confirmed", orderId);
+        const docRef = db.collection("confirmed").doc(orderId);
         const updateData = {
           payedWith: "ACH",
           stripe_ach_payment: {
@@ -600,12 +607,12 @@ app.post("/stripe-webhook", async (req, res) => {
             success: true,
           },
         };
-        await updateDoc(docRef, updateData);
+        await docRef.update(updateData);
       }
     }
 
     if (type === "payment_intent.payment_failed") {
-      const docRef = doc(db, "confirmed", orderId);
+      const docRef = db.collection("confirmed").doc(orderId);
 
       const updateData = {
         payedWith: "None",
@@ -615,7 +622,7 @@ app.post("/stripe-webhook", async (req, res) => {
         },
       };
 
-      await updateDoc(docRef, updateData);
+      await docRef.update(updateData);
     }
 
     res.send({
