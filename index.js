@@ -6,8 +6,6 @@ const crypto = require("crypto");
 const bodyParser = require("body-parser");
 const PDFDocument = require("pdfkit"); // Import the pdfkit library
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const nodemailer = require("nodemailer");
-const AWS = require("aws-sdk");
 
 const firebaseAdmin = require("firebase-admin");
 
@@ -38,29 +36,6 @@ firebaseAdmin.initializeApp({
   databaseURL: process.env.FIREBASE_DATABASE_URL,
 });
 
-const creds = {
-  host: process.env.MAIL_HOST,
-  port: process.env.MAIL_PORT,
-  auth: {
-    user: process.env.MAIL_USERNAME,
-    pass: process.env.MAIL_PASSWORD,
-  },
-};
-
-console.log("creds", creds);
-
-// use SMTP for send email
-const transporter = nodemailer.createTransport(creds);
-
-// Define email options
-const mailOptions = {
-  from: process.env.MAIL_FROM, // Sender address
-  to: "gourav@tepia.co", // List of recipients
-  subject: "Hello from AWS SES", // Subject line
-  text: "This is a test email sent using AWS SES and Nodemailer", // Plain text body
-  html: "<p>This is a test email sent using <b>AWS SES</b> and <b>Nodemailer</b></p>", // HTML body
-};
-
 const db = firebaseAdmin.firestore();
 
 const fs = require("fs");
@@ -84,28 +59,6 @@ const defaultClient = new Client({
 });
 
 const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
-
-app.get("/send-email", async (req, res) => {
-  try {
-    // Send email
-    transporter.sendMail(mailOptions, (err, info) => {
-      if (err) {
-        console.log("Error", err);
-      } else {
-        console.log("Email sent successfully", info);
-      }
-    });
-
-    res.send({
-      success: true,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({
-      errorMessage: error,
-    });
-  }
-});
 
 app.post("/chargeForCookie", async (request, response) => {
   const requestBody = request.body;
@@ -681,6 +634,8 @@ app.post("/stripe-webhook", async (req, res) => {
     });
   }
 });
+
+require("./controllers/email.controllers")(app, db);
 
 // listen for requests :)
 const listener = app.listen(process.env.PORT || 3000, function () {
