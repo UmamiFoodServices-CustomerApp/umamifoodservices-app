@@ -1,3 +1,5 @@
+const moment = require("moment");
+
 const formatMoney = (amount, precision = true) => {
   if (precision) {
     return `$${Number(amount ?? 0).toFixed(2)}`;
@@ -76,6 +78,16 @@ const getItemFinalAmount = (item) =>
   (item?.primaryQuantity ?? 1) * (item?.CustomerPrice ?? 1) +
   (item?.secondaryQuantity ?? 0) * (item?.CustomerUnitPrice ?? 1);
 
+const getDeliveryTime = (date = moment.unix()) => {
+  if (date?.seconds) {
+    return moment(date.seconds * 1000).format("LL");
+  }
+  if (moment(date).year() > 2010) {
+    return moment(date).format("MM/DD/YYYY");
+  }
+  return moment(date * 1000).format("MM/DD/YYYY");
+};
+
 module.exports = {
   formatMoney,
   getItemQuantity,
@@ -83,4 +95,5 @@ module.exports = {
   getItemNamePrefix,
   getItemName,
   getItemFinalAmount,
+  getDeliveryTime,
 };
