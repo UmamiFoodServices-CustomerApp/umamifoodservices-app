@@ -555,7 +555,7 @@ app.post("/create-stripe-ach-payment-intent", async (req, res) => {
     const orderId = order?.id;
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(order.totalCost * 1.03 * 100),
+      amount: Math.round(order.totalCost * 100),
       currency: "usd",
       customer: customer,
       description: `Order#: ${orderId}`,
