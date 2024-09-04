@@ -38,10 +38,14 @@ firebaseAdmin.initializeApp({
 
 const db = firebaseAdmin.firestore();
 
+const fs = require("fs");
 const path = require("path");
 
 // Define the file path
 const imagePath = path.join(__dirname, "images", "Logo.png");
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 // Initialized the Square Api client:
 //   Set environment
@@ -56,133 +60,113 @@ const defaultClient = new Client({
 
 const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
 
-// TODO: bodyParser.urlencoded({ extended: false }), bodyParser.json() these functions are passing directly to the app.post() method. This is not a good practice. You should pass these functions to the app.use() method.
-// I can't pass use it in app.use() because I am using one more parser for this endpoint: `/email-stripe-invoice` and that's why I can't use two parsers.
+app.post("/chargeForCookie", async (request, response) => {
+  const requestBody = request.body;
+  try {
+    const locationId = process.env.LOCATION_ID;
+    const createOrderRequest = {
+      ...requestBody.orderRequest,
+      locationId: locationId,
+    };
+    const createOrderResponse = await ordersApi.createOrder(createOrderRequest);
 
-app.post(
-  "/chargeForCookie",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (request, response) => {
-    const requestBody = request.body;
-    try {
-      const locationId = process.env.LOCATION_ID;
-      const createOrderRequest = {
-        ...requestBody.orderRequest,
-        locationId: locationId,
-      };
-      const createOrderResponse = await ordersApi.createOrder(
-        createOrderRequest
-      );
+    const createPaymentRequest = {
+      idempotencyKey: crypto.randomBytes(12).toString("hex"),
+      sourceId: requestBody.nonce,
+      amountMoney: {
+        ...createOrderResponse.result.order.totalMoney,
+      },
+      orderId: createOrderResponse.result.order.id,
+      autocomplete: true,
+      locationId,
+    };
+    const createPaymentResponse = await paymentsApi.createPayment(
+      createPaymentRequest
+    );
+    console.log(createPaymentResponse.result.payment);
 
-      const createPaymentRequest = {
-        idempotencyKey: crypto.randomBytes(12).toString("hex"),
-        sourceId: requestBody.nonce,
-        amountMoney: {
-          ...createOrderResponse.result.order.totalMoney,
-        },
-        orderId: createOrderResponse.result.order.id,
-        autocomplete: true,
-        locationId,
-      };
-      const createPaymentResponse = await paymentsApi.createPayment(
-        createPaymentRequest
-      );
-      console.log(createPaymentResponse.result.payment);
+    response.status(200).json(createPaymentResponse.result.payment);
+  } catch (e) {
+    console.log(
+      `[Error] Status:${e.statusCode}, Messages: ${JSON.stringify(
+        e.errors,
+        null,
+        2
+      )}`
+    );
 
-      response.status(200).json(createPaymentResponse.result.payment);
-    } catch (e) {
-      console.log(
-        `[Error] Status:${e.statusCode}, Messages: ${JSON.stringify(
-          e.errors,
-          null,
-          2
-        )}`
-      );
-
-      sendErrorMessage(e.errors, response);
-    }
+    sendErrorMessage(e.errors, response);
   }
-);
+});
 
-app.post(
-  "/chargeCustomerCard",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (request, response) => {
-    const requestBody = request.body;
+app.post("/chargeCustomerCard", async (request, response) => {
+  const requestBody = request.body;
 
-    try {
-      const listLocationsResponse = await locationsApi.listLocations();
-      const locationId = process.env.LOCATION_ID;
-      const createOrderRequest = {
-        ...requestBody.orderRequest,
-        locationId: locationId,
-      };
-      const createOrderResponse = await ordersApi.createOrder(
-        locationId,
-        createOrderRequest
-      );
-      const createPaymentRequest = {
-        idempotencyKey: crypto.randomBytes(12).toString("hex"),
-        customerId: requestBody.customer_id,
-        sourceId: requestBody.customer_card_id,
-        amountMoney: {
-          ...createOrderResponse.result.order.totalMoney,
-        },
-        orderId: createOrderResponse.result.order.id,
-      };
-      const createPaymentResponse = await paymentsApi.createPayment(
-        createPaymentRequest
-      );
-      console.log(createPaymentResponse.result.payment);
+  try {
+    const listLocationsResponse = await locationsApi.listLocations();
+    const locationId = process.env.LOCATION_ID;
+    const createOrderRequest = {
+      ...requestBody.orderRequest,
+      locationId: locationId,
+    };
+    const createOrderResponse = await ordersApi.createOrder(
+      locationId,
+      createOrderRequest
+    );
+    const createPaymentRequest = {
+      idempotencyKey: crypto.randomBytes(12).toString("hex"),
+      customerId: requestBody.customer_id,
+      sourceId: requestBody.customer_card_id,
+      amountMoney: {
+        ...createOrderResponse.result.order.totalMoney,
+      },
+      orderId: createOrderResponse.result.order.id,
+    };
+    const createPaymentResponse = await paymentsApi.createPayment(
+      createPaymentRequest
+    );
+    console.log(createPaymentResponse.result.payment);
 
-      response.status(200).json(createPaymentResponse.result.payment);
-    } catch (e) {
-      console.log(
-        `[Error] Status:${e.statusCode}, Messages: ${JSON.stringify(
-          e.errors,
-          null,
-          2
-        )}`
-      );
+    response.status(200).json(createPaymentResponse.result.payment);
+  } catch (e) {
+    console.log(
+      `[Error] Status:${e.statusCode}, Messages: ${JSON.stringify(
+        e.errors,
+        null,
+        2
+      )}`
+    );
 
-      sendErrorMessage(e.errors, response);
-    }
+    sendErrorMessage(e.errors, response);
   }
-);
+});
 
-app.post(
-  "/createCustomerCard",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (request, response) => {
-    const requestBody = request.body;
-    console.log(requestBody);
-    try {
-      const createCustomerCardRequestBody = {
-        cardNonce: requestBody.nonce,
-      };
-      const customerCardResponse = await customersApi.createCustomerCard(
-        requestBody.customer_id,
-        createCustomerCardRequestBody
-      );
-      console.log(customerCardResponse.result.card);
+app.post("/createCustomerCard", async (request, response) => {
+  const requestBody = request.body;
+  console.log(requestBody);
+  try {
+    const createCustomerCardRequestBody = {
+      cardNonce: requestBody.nonce,
+    };
+    const customerCardResponse = await customersApi.createCustomerCard(
+      requestBody.customer_id,
+      createCustomerCardRequestBody
+    );
+    console.log(customerCardResponse.result.card);
 
-      response.status(200).json(customerCardResponse.result.card);
-    } catch (e) {
-      console.log(
-        `[Error] Status:${e.statusCode}, Messages: ${JSON.stringify(
-          e.errors,
-          null,
-          2
-        )}`
-      );
+    response.status(200).json(customerCardResponse.result.card);
+  } catch (e) {
+    console.log(
+      `[Error] Status:${e.statusCode}, Messages: ${JSON.stringify(
+        e.errors,
+        null,
+        2
+      )}`
+    );
 
-      sendErrorMessage(e.errors, response);
-    }
+    sendErrorMessage(e.errors, response);
   }
-);
+});
 
 function getOrderRequest(locationId) {
   return {
@@ -269,437 +253,387 @@ function sendErrorMessage(errors, response) {
   }
 }
 
-app.get(
-  "/generatePdf",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (request, response) => {
-    try {
-      const orderId = request.query.orderId;
+app.get("/generatePdf", async (request, response) => {
+  try {
+    const orderId = request.query.orderId;
 
-      const orderDocRef = db.collection("completed").doc(orderId);
-      const orderSnap = await orderDocRef.get();
+    const orderDocRef = db.collection("completed").doc(orderId);
+    const orderSnap = await orderDocRef.get();
 
-      const order = orderSnap?.data?.();
-      const items = order.items;
+    const order = orderSnap?.data?.();
+    const items = order.items;
 
-      const todayDate = () => {
-        const currentDate = new Date();
-        const day = String(currentDate.getDate()).padStart(2, "0");
-        const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-        const year = currentDate.getFullYear();
+    const todayDate = () => {
+      const currentDate = new Date();
+      const day = String(currentDate.getDate()).padStart(2, "0");
+      const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+      const year = currentDate.getFullYear();
 
-        return `${day}/${month}/${year}`;
-      };
+      return `${day}/${month}/${year}`;
+    };
 
-      let fontNormal = "Helvetica";
-      let fontBold = "Helvetica-Bold";
+    let fontNormal = "Helvetica";
+    let fontBold = "Helvetica-Bold";
 
-      // Create a new PDF document
-      const doc = new PDFDocument();
-      // Pipe the PDF to the response object
-      doc.pipe(response);
+    // Create a new PDF document
+    const doc = new PDFDocument();
+    // Pipe the PDF to the response object
+    doc.pipe(response);
 
+    doc
+      .image(imagePath, { scale: 0.2 })
+      .fontSize(18)
+      .font(fontBold)
+      .text("Umami Food Services", 200, 100)
+      .fontSize(12)
+      .font(fontNormal)
+      .text("14841 Moran St", 200, 124)
+      .text("Westminster, CA 92683 US", 200, 140)
+      .text("sales@umamiservices.com", 200, 156);
+
+    doc
+      .fillColor("#FF8C00")
+      .fontSize(26)
+      .font(fontBold)
+      .text("INVOICE", 60, 180, {});
+
+    doc.moveDown(0.4);
+
+    doc
+      .fillColor("#000000")
+      .font(fontBold)
+      .fontSize(18)
+      .text("Bill To", { align: "start" })
+      .fontSize(12)
+      .font(fontNormal)
+      .text(order.name)
+      .text(order.businessName)
+      .text(order.confirmedDeliveryAddress);
+
+    doc
+      .fillColor("#000000")
+      .font(fontBold)
+      .fontSize(14)
+      .text("INVOICE #", 400, 225, { continued: true, paragraphGap: 10 })
+      .fontSize(12)
+      .font(fontNormal)
+      .text(todayDate(), 440);
+
+    doc.moveDown(4.4);
+
+    doc.stroke();
+    doc.lineWidth(25).fillColor("red");
+
+    doc.lineWidth(0.5);
+    doc.strokeColor("#fd8c02");
+    doc.moveTo(50, 300).lineTo(570, 300).stroke();
+
+    doc.rect(50, 310, 520, 24).fill("#ffe8cc").stroke("#fd8c02");
+    doc.fillColor("#fd8c02").font(fontBold).text("QTY", 60, 317, { width: 90 });
+    doc.font(fontBold).text("ITEMS", 110, 317, { width: 300 });
+    doc.font(fontBold).text("RATE", 420, 317, { width: 90 });
+    doc.font(fontBold).text("AMOUNT", 500, 317, { width: 100 });
+
+    let itemNo = 1;
+    items.forEach((item) => {
+      let y = 330 + itemNo * 20;
       doc
-        .image(imagePath, { scale: 0.2 })
-        .fontSize(18)
-        .font(fontBold)
-        .text("Umami Food Services", 200, 100)
-        .fontSize(12)
+        .fillColor("#000")
         .font(fontNormal)
-        .text("14841 Moran St", 200, 124)
-        .text("Westminster, CA 92683 US", 200, 140)
-        .text("sales@umamiservices.com", 200, 156);
-
+        .text(getItemQuantity(item), 60, y, { width: 90 });
+      doc.font(fontNormal).text(getItemName(item), 110, y, { width: 300 });
+      doc.font(fontNormal).text(getItemRate(item), 420, y, { width: 90 });
       doc
-        .fillColor("#FF8C00")
-        .fontSize(26)
-        .font(fontBold)
-        .text("INVOICE", 60, 180, {});
-
-      doc.moveDown(0.4);
-
-      doc
-        .fillColor("#000000")
-        .font(fontBold)
-        .fontSize(18)
-        .text("Bill To", { align: "start" })
-        .fontSize(12)
         .font(fontNormal)
-        .text(order.name)
-        .text(order.businessName)
-        .text(order.confirmedDeliveryAddress);
-
-      doc
-        .fillColor("#000000")
-        .font(fontBold)
-        .fontSize(14)
-        .text("INVOICE #", 400, 225, { continued: true, paragraphGap: 10 })
-        .fontSize(12)
-        .font(fontNormal)
-        .text(todayDate(), 440);
-
-      doc.moveDown(4.4);
-
-      doc.stroke();
-      doc.lineWidth(25).fillColor("red");
-
-      doc.lineWidth(0.5);
-      doc.strokeColor("#fd8c02");
-      doc.moveTo(50, 300).lineTo(570, 300).stroke();
-
-      doc.rect(50, 310, 520, 24).fill("#ffe8cc").stroke("#fd8c02");
-      doc
-        .fillColor("#fd8c02")
-        .font(fontBold)
-        .text("QTY", 60, 317, { width: 90 });
-      doc.font(fontBold).text("ITEMS", 110, 317, { width: 300 });
-      doc.font(fontBold).text("RATE", 420, 317, { width: 90 });
-      doc.font(fontBold).text("AMOUNT", 500, 317, { width: 100 });
-
-      let itemNo = 1;
-      items.forEach((item) => {
-        let y = 330 + itemNo * 20;
-        doc
-          .fillColor("#000")
-          .font(fontNormal)
-          .text(getItemQuantity(item), 60, y, { width: 90 });
-        doc.font(fontNormal).text(getItemName(item), 110, y, { width: 300 });
-        doc.font(fontNormal).text(getItemRate(item), 420, y, { width: 90 });
-        doc
-          .font(fontNormal)
-          .text(formatMoney(getItemFinalAmount(item)), 500, y, { width: 100 });
-        itemNo++;
-      });
-
+        .text(formatMoney(getItemFinalAmount(item)), 500, y, { width: 100 });
       itemNo++;
+    });
 
-      doc.dash(5, { space: 2 });
-      doc.lineWidth(0.5);
-      doc.strokeColor("#333333");
-      doc
-        .moveTo(50, 310 + itemNo * 20)
-        .lineTo(570, 310 + itemNo * 20)
-        .stroke();
-      doc.undash();
+    itemNo++;
 
-      doc.font(fontBold).text("TOTAL", 400, 330 + itemNo * 20);
-      doc
-        .font(fontBold)
-        .text(formatMoney(order.totalCost), 500, 330 + itemNo * 20, {
-          width: 100,
-        });
+    doc.dash(5, { space: 2 });
+    doc.lineWidth(0.5);
+    doc.strokeColor("#333333");
+    doc
+      .moveTo(50, 310 + itemNo * 20)
+      .lineTo(570, 310 + itemNo * 20)
+      .stroke();
+    doc.undash();
 
-      doc.end();
-
-      // Set response headers for PDF
-      response.setHeader("Content-Type", "application/pdf");
-      response.setHeader("Content-Disposition", "inline; filename=invoice.pdf");
-    } catch (error) {
-      console.error(error);
-      response.status(500).send({
-        errorMessage: "PDF error; please try again;",
+    doc.font(fontBold).text("TOTAL", 400, 330 + itemNo * 20);
+    doc
+      .font(fontBold)
+      .text(formatMoney(order.totalCost), 500, 330 + itemNo * 20, {
+        width: 100,
       });
-    }
+
+    doc.end();
+
+    // Set response headers for PDF
+    response.setHeader("Content-Type", "application/pdf");
+    response.setHeader("Content-Disposition", "inline; filename=invoice.pdf");
+  } catch (error) {
+    console.error(error);
+    response.status(500).send({
+      errorMessage: "PDF error; please try again;",
+    });
   }
-);
+});
 
-app.post(
-  "/create-stripe-customer",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (req, res) => {
-    try {
-      const customer = req.body.customer;
-      let customerId = customer?.stripeCustomer;
+app.post("/create-stripe-customer", async (req, res) => {
+  try {
+    const customer = req.body.customer;
+    let customerId = customer?.stripeCustomer;
 
-      if (customerId) {
-        try {
-          const res = await stripe.customers.retrieve(customerId);
-          if (res?.deleted) customerId = null;
-        } catch (err) {
-          customerId = null;
-        }
+    if (customerId) {
+      try {
+        const res = await stripe.customers.retrieve(customerId);
+        if (res?.deleted) customerId = null;
+      } catch (err) {
+        customerId = null;
       }
-
-      if (!customerId) {
-        const data = {
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone,
-          address: {
-            city: customer.city,
-            country: "US",
-            line1: customer.address1,
-            line2: customer.address2,
-            postal_code: customer.zip,
-            state: customer.state,
-          },
-          metadata: {
-            reference_id: customer.id,
-          },
-        };
-        const response = await stripe.customers.create(data);
-        customerId = response.id;
-      }
-
-      res.send({
-        customer: customerId,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).send({ errorMessage: error });
     }
-  }
-);
 
-app.post(
-  "/create-stripe-payment-intent",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (req, res) => {
-    try {
-      const order = req.body?.order;
-      const customer = req.body?.customer;
-      const orderId = order?.id;
-
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(order.totalCost * 1.03 * 100),
-        currency: "usd",
-        customer: customer,
-        metadata: { orderId },
-        automatic_payment_methods: {
-          enabled: true,
-        },
-        description: `Order#: ${orderId}`,
-      });
-
-      res.send({
-        paymentIntent: paymentIntent.client_secret,
-        customer: customer,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).send({
-        errorMessage: error,
-      });
-    }
-  }
-);
-
-app.post(
-  "/create-stripe-setup-intent",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (req, res) => {
-    try {
-      const customer = req.body?.customer;
-      const customerId = customer?.stripeCustomer;
-
-      const paymentIntent = await stripe.setupIntents.create({
-        customer: customerId,
-        description: `setup intent - customer: ${customer?.id} email: ${
-          customer?.email ?? customer?.email_address
-        }`,
-      });
-
-      res.send({
-        paymentIntent: paymentIntent.client_secret,
-        customer: customerId,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).send({
-        errorMessage: error,
-      });
-    }
-  }
-);
-
-app.post(
-  "/fetch-stripe-all-saved-cards",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (req, res) => {
-    try {
-      const customer = req.body?.customer;
-
-      const response = await stripe.paymentMethods.list({
-        customer: customer,
-        type: "card",
-      });
-
-      res.send({
-        savedCards: response?.data ?? [],
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).send({
-        errorMessage: error,
-      });
-    }
-  }
-);
-
-app.post(
-  "/delete-stripe-saved-card",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (req, res) => {
-    try {
-      const card = req.body?.card;
-
-      await stripe.paymentMethods.detach(card.id);
-
-      res.send({
-        success: true,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).send({
-        errorMessage: error,
-      });
-    }
-  }
-);
-
-app.post(
-  "/charge-stripe-saved-card",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (req, res) => {
-    try {
-      const card = req.body?.card;
-      const customer = req.body?.customer;
-      const order = req.body?.order;
-      const orderId = order?.id;
-
+    if (!customerId) {
       const data = {
-        amount: Math.round(order.totalCost * 1.03 * 100),
-        currency: "usd",
-        customer: customer,
-        payment_method: card.id,
-        off_session: true,
-        confirm: true,
-        description: `Order#: ${orderId}`,
-        metadata: { orderId },
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        address: {
+          city: customer.city,
+          country: "US",
+          line1: customer.address1,
+          line2: customer.address2,
+          postal_code: customer.zip,
+          state: customer.state,
+        },
+        metadata: {
+          reference_id: customer.id,
+        },
       };
-
-      console.log("data--------------", data);
-
-      await stripe.paymentIntents.create(data);
-
-      res.send({
-        success: true,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).send({
-        errorMessage: error,
-      });
+      const response = await stripe.customers.create(data);
+      customerId = response.id;
     }
+
+    res.send({
+      customer: customerId,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ errorMessage: error });
   }
-);
+});
 
-app.post(
-  "/create-stripe-ach-payment-intent",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (req, res) => {
-    try {
-      const order = req.body?.order;
-      const customer = req.body?.customer;
+app.post("/create-stripe-payment-intent", async (req, res) => {
+  try {
+    const order = req.body?.order;
+    const customer = req.body?.customer;
+    const orderId = order?.id;
 
-      const orderId = order?.id;
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(order.totalCost * 1.03 * 100),
+      currency: "usd",
+      customer: customer,
+      metadata: { orderId },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+      description: `Order#: ${orderId}`,
+    });
 
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(order.totalCost * 1.03 * 100),
-        currency: "usd",
-        customer: customer,
-        description: `Order#: ${orderId}`,
-        setup_future_usage: "off_session",
-        payment_method_types: ["us_bank_account"],
-        metadata: { orderId },
-        payment_method_options: {
-          us_bank_account: {
-            financial_connections: {
-              permissions: ["payment_method", "balances"],
-            },
+    res.send({
+      paymentIntent: paymentIntent.client_secret,
+      customer: customer,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      errorMessage: error,
+    });
+  }
+});
+
+app.post("/create-stripe-setup-intent", async (req, res) => {
+  try {
+    const customer = req.body?.customer;
+    const customerId = customer?.stripeCustomer;
+
+    const paymentIntent = await stripe.setupIntents.create({
+      customer: customerId,
+      description: `setup intent - customer: ${customer?.id} email: ${
+        customer?.email ?? customer?.email_address
+      }`,
+    });
+
+    res.send({
+      paymentIntent: paymentIntent.client_secret,
+      customer: customerId,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      errorMessage: error,
+    });
+  }
+});
+
+app.post("/fetch-stripe-all-saved-cards", async (req, res) => {
+  try {
+    const customer = req.body?.customer;
+
+    const response = await stripe.paymentMethods.list({
+      customer: customer,
+      type: "card",
+    });
+
+    res.send({
+      savedCards: response?.data ?? [],
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      errorMessage: error,
+    });
+  }
+});
+
+app.post("/delete-stripe-saved-card", async (req, res) => {
+  try {
+    const card = req.body?.card;
+
+    await stripe.paymentMethods.detach(card.id);
+
+    res.send({
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      errorMessage: error,
+    });
+  }
+});
+
+app.post("/charge-stripe-saved-card", async (req, res) => {
+  try {
+    const card = req.body?.card;
+    const customer = req.body?.customer;
+    const order = req.body?.order;
+    const orderId = order?.id;
+
+    const data = {
+      amount: Math.round(order.totalCost * 1.03 * 100),
+      currency: "usd",
+      customer: customer,
+      payment_method: card.id,
+      off_session: true,
+      confirm: true,
+      description: `Order#: ${orderId}`,
+      metadata: { orderId },
+    };
+
+    console.log("data--------------", data);
+
+    await stripe.paymentIntents.create(data);
+
+    res.send({
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      errorMessage: error,
+    });
+  }
+});
+
+app.post("/create-stripe-ach-payment-intent", async (req, res) => {
+  try {
+    const order = req.body?.order;
+    const customer = req.body?.customer;
+
+    const orderId = order?.id;
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(order.totalCost * 100),
+      currency: "usd",
+      customer: customer,
+      description: `Order#: ${orderId}`,
+      setup_future_usage: "off_session",
+      payment_method_types: ["us_bank_account"],
+      metadata: { orderId },
+      payment_method_options: {
+        us_bank_account: {
+          financial_connections: {
+            permissions: ["payment_method", "balances"],
           },
         },
-      });
+      },
+    });
 
-      res.send({
-        paymentIntent: paymentIntent.client_secret,
-        customer: customer,
-      });
-    } catch (error) {
-      console.error(error);
-      res.status(500).send({
-        errorMessage: error,
-      });
-    }
+    res.send({
+      paymentIntent: paymentIntent.client_secret,
+      customer: customer,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      errorMessage: error,
+    });
   }
-);
+});
 
-app.post(
-  "/stripe-webhook",
-  bodyParser.urlencoded({ extended: false }),
-  bodyParser.json(),
-  async (req, res) => {
-    try {
-      const type = req.body?.type;
-      const orderId = req.body?.data?.object?.metadata?.orderId;
+app.post("/stripe-webhook", async (req, res) => {
+  try {
+    const type = req.body?.type;
+    const orderId = req.body?.data?.object?.metadata?.orderId;
 
-      if (
-        type === "payment_intent.succeeded" ||
-        type === "invoice.payment_succeeded"
-      ) {
-        const orderDocRef = db.collection("confirmed").doc(orderId);
-        const orderSnap = await orderDocRef.get();
-        const order = orderSnap?.data?.();
+    if (
+      type === "payment_intent.succeeded" ||
+      type === "invoice.payment_succeeded"
+    ) {
+      const orderDocRef = db.collection("confirmed").doc(orderId);
+      const orderSnap = await orderDocRef.get();
+      const order = orderSnap?.data?.();
 
-        const paymentSelected = order.paymentSelected;
+      const paymentSelected = order.paymentSelected;
 
-        if (paymentSelected === "ACH") {
-          const docRef = db.collection("confirmed").doc(orderId);
-          const updateData = {
-            payedWith: "ACH",
-            stripe_ach_payment: {
-              in_progress: false,
-              success: true,
-            },
-          };
-          await docRef.update(updateData);
-        }
-      }
-
-      if (type === "payment_intent.payment_failed") {
+      if (paymentSelected === "ACH") {
         const docRef = db.collection("confirmed").doc(orderId);
-
         const updateData = {
-          payedWith: "None",
+          payedWith: "ACH",
           stripe_ach_payment: {
             in_progress: false,
-            success: false,
+            success: true,
           },
         };
-
         await docRef.update(updateData);
       }
-
-      res.send({
-        success: true,
-      });
-    } catch (error) {
-      res.send({
-        success: false,
-      });
     }
-  }
-);
 
-require("./controllers/email.controllers")(app, db);
+    if (type === "payment_intent.payment_failed") {
+      const docRef = db.collection("confirmed").doc(orderId);
+
+      const updateData = {
+        payedWith: "None",
+        stripe_ach_payment: {
+          in_progress: false,
+          success: false,
+        },
+      };
+
+      await docRef.update(updateData);
+    }
+
+    res.send({
+      success: true,
+    });
+  } catch (error) {
+    res.send({
+      success: false,
+    });
+  }
+});
 
 // listen for requests :)
 const listener = app.listen(process.env.PORT || 3000, function () {
