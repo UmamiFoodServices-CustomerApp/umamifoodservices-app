@@ -23,7 +23,7 @@
     "stripe": "^10.5.0"
   },
   "engines": {
-    "node": ">= 10.x"
+    "node": "20.11.0"
   },
   "keywords": [],
   "author": "",
