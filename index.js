@@ -594,16 +594,10 @@ app.post("/stripe-webhook", async (req, res) => {
       type === "invoice.payment_succeeded"
     ) {
       console.log("inside------>", { metadata, orderId });
-      const orderDocRef = db.collection("confirmed").limit(10).doc(orderId);
-      const orderSnap = await orderDocRef
-        .get()
-        .then((doc) => {
-          return doc;
-        })
-        .catch((error) => {
-          console.error("Error getting document:", error);
-        });
-      console.log("inside------> 0", orderSnap);
+      const snapshot = await db.collection("confirmed").limit(10).get();
+      snapshot.forEach((doc) => {
+        console.log(doc.id, "=>", doc.data());
+      });
       // const order = orderSnap?.data?.();
 
       // console.log("inside------> 1");
