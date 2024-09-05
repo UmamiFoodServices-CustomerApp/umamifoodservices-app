@@ -599,6 +599,8 @@ app.post("/stripe-webhook", async (req, res) => {
       const orderSnap = await orderDocRef.get();
       const order = orderSnap?.data?.();
 
+      console.log("inside------> 1");
+
       const paymentSelected = order.paymentSelected;
 
       if (paymentSelected === "ACH") {
@@ -611,6 +613,7 @@ app.post("/stripe-webhook", async (req, res) => {
           },
         };
         await docRef.update(updateData);
+        console.log("inside------> 2");
       }
     }
 
@@ -624,7 +627,7 @@ app.post("/stripe-webhook", async (req, res) => {
           success: false,
         },
       };
-
+      console.log("inside------> 3");
       await docRef.update(updateData);
     }
 
