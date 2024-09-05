@@ -594,7 +594,7 @@ app.post("/stripe-webhook", async (req, res) => {
       type === "invoice.payment_succeeded"
     ) {
       console.log("inside------>", { metadata, orderId });
-      const orderDocRef = db.collection("confirmed").doc(orderId);
+      const orderDocRef = db.collection("confirmed").limit(10).doc(orderId);
       const orderSnap = await orderDocRef
         .get()
         .then((doc) => {
