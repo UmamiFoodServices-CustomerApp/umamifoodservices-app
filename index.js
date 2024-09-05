@@ -603,33 +603,33 @@ app.post("/stripe-webhook", async (req, res) => {
 
       const paymentSelected = "ACH";
 
-      if (paymentSelected === "ACH") {
-        const docRef = db.collection("confirmed").doc(orderId);
-        const updateData = {
-          payedWith: "ACH",
-          stripe_ach_payment: {
-            in_progress: false,
-            success: true,
-          },
-        };
-        await docRef.update(updateData);
-        console.log("inside------> 2");
-      }
-    }
+    //   if (paymentSelected === "ACH") {
+    //     const docRef = db.collection("confirmed").doc(orderId);
+    //     const updateData = {
+    //       payedWith: "ACH",
+    //       stripe_ach_payment: {
+    //         in_progress: false,
+    //         success: true,
+    //       },
+    //     };
+    //     await docRef.update(updateData);
+    //     console.log("inside------> 2");
+    //   }
+    // }
 
-    if (type === "payment_intent.payment_failed") {
-      const docRef = db.collection("confirmed").doc(orderId);
+    // if (type === "payment_intent.payment_failed") {
+    //   const docRef = db.collection("confirmed").doc(orderId);
 
-      const updateData = {
-        payedWith: "None",
-        stripe_ach_payment: {
-          in_progress: false,
-          success: false,
-        },
-      };
-      console.log("inside------> 3");
-      await docRef.update(updateData);
-    }
+    //   const updateData = {
+    //     payedWith: "None",
+    //     stripe_ach_payment: {
+    //       in_progress: false,
+    //       success: false,
+    //     },
+    //   };
+    //   console.log("inside------> 3");
+    //   await docRef.update(updateData);
+    // }
 
     res.send({
       success: true,
