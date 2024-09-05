@@ -629,6 +629,7 @@ app.post("/stripe-webhook", async (req, res) => {
       success: true,
     });
   } catch (error) {
+    console.error(error);
     res.send({
       success: false,
     });
