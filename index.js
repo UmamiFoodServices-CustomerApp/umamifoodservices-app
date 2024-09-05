@@ -596,6 +596,7 @@ app.post("/stripe-webhook", async (req, res) => {
       console.log("inside------>", { metadata, orderId });
       const orderDocRef = db.collection("confirmed").doc(orderId);
       const orderSnap = await orderDocRef.get();
+      console.log("inside------> 0", orderSnap);
       const order = orderSnap?.data?.();
 
       console.log("inside------> 1");
