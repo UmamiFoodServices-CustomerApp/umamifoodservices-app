@@ -587,35 +587,28 @@ app.post("/stripe-webhook", async (req, res) => {
   try {
     const type = req.body?.type;
     const orderId = req.body?.data?.object?.metadata?.orderId;
-    const metadata = req.body?.data?.object?.metadata;
 
     if (
       type === "payment_intent.succeeded" ||
       type === "invoice.payment_succeeded"
     ) {
-      console.log("inside------>", { metadata, orderId });
-      const snapshot = await db.collection("confirmed").limit(10).get();
-      snapshot.forEach((doc) => {
-        console.log(doc.id, "=>", doc.data());
-      });
-      // const order = orderSnap?.data?.();
+      const orderDocRef = db.collection("confirmed").doc(orderId);
+      const orderSnap = await orderDocRef.get();
+      const order = orderSnap?.data?.();
 
-      // console.log("inside------> 1");
+      const paymentSelected = order.paymentSelected;
 
-      // const paymentSelected = "ACH";
-
-      // if (paymentSelected === "ACH") {
-      //   const docRef = db.collection("confirmed").doc(orderId);
-      //   const updateData = {
-      //     payedWith: "ACH",
-      //     stripe_ach_payment: {
-      //       in_progress: false,
-      //       success: true,
-      //     },
-      //   };
-      //   await docRef.update(updateData);
-      //   console.log("inside------> 2");
-      // }
+      if (paymentSelected === "ACH") {
+        const docRef = db.collection("confirmed").doc(orderId);
+        const updateData = {
+          payedWith: "ACH",
+          stripe_ach_payment: {
+            in_progress: false,
+            success: true,
+          },
+        };
+        await docRef.update(updateData);
+      }
     }
 
     if (type === "payment_intent.payment_failed") {
@@ -628,7 +621,7 @@ app.post("/stripe-webhook", async (req, res) => {
           success: false,
         },
       };
-      console.log("inside------> 3");
+
       await docRef.update(updateData);
     }
 
