@@ -587,14 +587,13 @@ app.post("/stripe-webhook", async (req, res) => {
   try {
     const type = req.body?.type;
     const orderId = req.body?.data?.object?.metadata?.orderId;
-
-    console.log("req.body", req.body);
+    const metadata = req.body?.data?.object?.metadata;
 
     if (
       type === "payment_intent.succeeded" ||
       type === "invoice.payment_succeeded"
     ) {
-      console.log("inside------>");
+      console.log("inside------>", { metadata, orderId });
       const orderDocRef = db.collection("confirmed").doc(orderId);
       const orderSnap = await orderDocRef.get();
       const order = orderSnap?.data?.();
