@@ -594,14 +594,14 @@ app.post("/stripe-webhook", async (req, res) => {
       type === "invoice.payment_succeeded"
     ) {
       console.log("inside------>", { metadata, orderId });
-      const orderDocRef = db.collection("confirmed").doc(orderId);
-      const orderSnap = await orderDocRef.get();
-      console.log("inside------> 0", orderSnap);
-      const order = orderSnap?.data?.();
+      // const orderDocRef = db.collection("confirmed").doc(orderId);
+      // const orderSnap = await orderDocRef.get();
+      // console.log("inside------> 0", orderSnap);
+      // const order = orderSnap?.data?.();
 
       console.log("inside------> 1");
 
-      const paymentSelected = order.paymentSelected;
+      const paymentSelected = "ACH";
 
       if (paymentSelected === "ACH") {
         const docRef = db.collection("confirmed").doc(orderId);
