@@ -289,44 +289,49 @@ app.get("/generatePdf", async (request, response) => {
 
     // Create a new PDF document
     const doc = new PDFDocument();
-    if (email) {
-      const buffers = [];
-      doc.on("data", buffers.push.bind(buffers));
-      doc.on("end", async () => {
-        const pdfData = Buffer.concat(buffers);
+    const buffers = [];
+    doc.on("data", buffers.push.bind(buffers));
+    doc.on("end", async () => {
+      if (!email) {
+        // Set response headers for PDF
+        response.setHeader("Content-Type", "application/pdf");
+        return response.setHeader(
+          "Content-Disposition",
+          "inline; filename=invoice.pdf"
+        );
+      }
+      const pdfData = Buffer.concat(buffers);
 
-        let mailOptions = {
-          from: process.env.MAIL_FROM,
-          to: email,
-          subject: "Your Invoice",
-          text: "Please find attached your invoice.",
-          attachments: [
-            {
-              filename: "invoice.pdf",
-              content: pdfData,
-            },
-          ],
-        };
+      let mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Your Invoice",
+        text: "Please find attached your invoice.",
+        attachments: [
+          {
+            filename: "invoice.pdf",
+            content: pdfData,
+          },
+        ],
+      };
 
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.error(error);
-            response.status(500).send({
-              errorMessage: "Email error; please try again;",
-            });
-          } else {
-            console.log("Email sent: " + info.response);
-            response.setHeader("Content-Type", "application/pdf");
-            response.setHeader(
-              "Content-Disposition",
-              "inline; filename=invoice.pdf"
-            );
-            response.send(pdfData);
-          }
-        });
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error(error);
+          response.status(500).send({
+            errorMessage: "Email error; please try again;",
+          });
+        } else {
+          console.log("Email sent: " + info.response);
+          response.setHeader("Content-Type", "application/pdf");
+          response.setHeader(
+            "Content-Disposition",
+            "inline; filename=invoice.pdf"
+          );
+          response.send(pdfData);
+        }
       });
-    }
-
+    });
     doc
       .image(imagePath, { scale: 0.2 })
       .fontSize(18)
