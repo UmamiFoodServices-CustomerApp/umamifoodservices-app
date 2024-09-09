@@ -699,7 +699,7 @@ app.post(
   }
 );
 
-require("./controllers/email.controllers")(app, db);
+require("./controllers/email.controllers")(app, db, bodyParser);
 
 // listen for requests :)
 const listener = app.listen(process.env.PORT || 3000, function () {
