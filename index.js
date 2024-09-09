@@ -293,15 +293,17 @@ app.get("/generatePdf", async (request, response) => {
     const buffers = [];
     doc.on("data", buffers.push.bind(buffers));
     doc.on("end", async () => {
+      const pdfData = Buffer.concat(buffers);
+
       if (!email) {
         // Set response headers for PDF
         response.setHeader("Content-Type", "application/pdf");
-        return response.setHeader(
+        response.setHeader(
           "Content-Disposition",
           "inline; filename=invoice.pdf"
         );
+        return response.send(pdfData);
       }
-      const pdfData = Buffer.concat(buffers);
 
       let mailOptions = {
         from: process.env.MAIL_FROM,
