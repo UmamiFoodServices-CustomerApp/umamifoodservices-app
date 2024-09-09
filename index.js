@@ -1,4 +1,5 @@
 const express = require("express");
+const nodemailer = require("nodemailer");
 const app = express();
 require("dotenv").config();
 const { Client, Environment } = require("square");
