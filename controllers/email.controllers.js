@@ -3,6 +3,7 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const express = require("express");
 const sendPaymentNotificationHtmlBody = require("../emails/stripePaymentReceived");
 const sendInvoiceHtmlBody = require("../emails/invoiceSend");
+const bodyParser = require("body-parser");
 
 module.exports = (app, db) => {
   const creds = {
@@ -16,28 +17,35 @@ module.exports = (app, db) => {
 
   const transporter = nodemailer.createTransport(creds);
 
-  app.post("/send-email", async (request, res) => {
-    try {
-      const orderDocRef = db.collection("confirmed").doc(request.body.orderId);
-      const orderSnap = await orderDocRef.get();
-      const order = orderSnap?.data?.();
+  app.post(
+    "/send-email",
+    bodyParser.urlencoded({ extended: false }),
+    bodyParser.json(),
+    async (request, res) => {
+      try {
+        const orderDocRef = db
+          .collection("confirmed")
+          .doc(request.body.orderId);
+        const orderSnap = await orderDocRef.get();
+        const order = orderSnap?.data?.();
 
-      const mailOptions = {
-        from: process.env.MAIL_FROM,
-        to: order.customer.email,
-        subject: `Umami Food Services - Invoice #${order?.orderId}`,
-        html: sendInvoiceHtmlBody(order),
-      };
+        const mailOptions = {
+          from: process.env.MAIL_FROM,
+          to: order.customer.email,
+          subject: `Umami Food Services - Invoice #${order?.orderId}`,
+          html: sendInvoiceHtmlBody(order),
+        };
 
-      await transporter.sendMail(mailOptions);
+        await transporter.sendMail(mailOptions);
 
-      res.send({ success: true });
-    } catch (error) {
-      res.status(500).send({
-        errorMessage: error?.message,
-      });
+        res.send({ success: true });
+      } catch (error) {
+        res.status(500).send({
+          errorMessage: error?.message,
+        });
+      }
     }
-  });
+  );
 
   app.post(
     "/email-stripe-invoice",
