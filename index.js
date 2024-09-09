@@ -38,6 +38,17 @@ firebaseAdmin.initializeApp({
 
 const db = firebaseAdmin.firestore();
 
+const creds = {
+  host: process.env.MAIL_HOST,
+  port: process.env.MAIL_PORT,
+  auth: {
+    user: process.env.MAIL_USERNAME,
+    pass: process.env.MAIL_PASSWORD,
+  },
+};
+
+const transporter = nodemailer.createTransport(creds);
+
 const fs = require("fs");
 const path = require("path");
 
@@ -256,6 +267,7 @@ function sendErrorMessage(errors, response) {
 app.get("/generatePdf", async (request, response) => {
   try {
     const orderId = request.query.orderId;
+    const email = request.query.email;
 
     const orderDocRef = db.collection("completed").doc(orderId);
     const orderSnap = await orderDocRef.get();
@@ -277,8 +289,43 @@ app.get("/generatePdf", async (request, response) => {
 
     // Create a new PDF document
     const doc = new PDFDocument();
-    // Pipe the PDF to the response object
-    doc.pipe(response);
+    if (email) {
+      const buffers = [];
+      doc.on("data", buffers.push.bind(buffers));
+      doc.on("end", async () => {
+        const pdfData = Buffer.concat(buffers);
+
+        let mailOptions = {
+          from: process.env.MAIL_FROM,
+          to: email,
+          subject: "Your Invoice",
+          text: "Please find attached your invoice.",
+          attachments: [
+            {
+              filename: "invoice.pdf",
+              content: pdfData,
+            },
+          ],
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error(error);
+            response.status(500).send({
+              errorMessage: "Email error; please try again;",
+            });
+          } else {
+            console.log("Email sent: " + info.response);
+            response.setHeader("Content-Type", "application/pdf");
+            response.setHeader(
+              "Content-Disposition",
+              "inline; filename=invoice.pdf"
+            );
+            response.send(pdfData);
+          }
+        });
+      });
+    }
 
     doc
       .image(imagePath, { scale: 0.2 })
@@ -368,10 +415,6 @@ app.get("/generatePdf", async (request, response) => {
       });
 
     doc.end();
-
-    // Set response headers for PDF
-    response.setHeader("Content-Type", "application/pdf");
-    response.setHeader("Content-Disposition", "inline; filename=invoice.pdf");
   } catch (error) {
     console.error(error);
     response.status(500).send({
