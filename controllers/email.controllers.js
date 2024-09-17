@@ -49,7 +49,7 @@ module.exports = (app, db) => {
 
   app.post(
     "/email-stripe-invoice",
-    express.raw({ type: "*/*" }),
+    express.raw({ type: "application/json" }),
     async (req, res) => {
       const sig = req.headers["stripe-signature"];
       let event;
@@ -83,7 +83,7 @@ module.exports = (app, db) => {
           html: sendPaymentNotificationHtmlBody(
             customerName,
             amountPaid,
-            customerEmail
+            "gourav@yopmail.com"
           ),
         };
 
