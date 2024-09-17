@@ -57,8 +57,10 @@ module.exports = (app, db) => {
       console.log("req.body", req.body);
 
       try {
+        // Convert the raw body from Buffer to string
+        const rawBody = req.body.toString("utf8");
         event = stripe.webhooks.constructEvent(
-          req.body,
+          rawBody,
           sig,
           process.env.STRIPE_WEBHOOK_SECRET
         );
