@@ -1,4 +1,5 @@
 const express = require("express");
+const nodemailer = require("nodemailer");
 const app = express();
 require("dotenv").config();
 const { Client, Environment } = require("square");
@@ -38,6 +39,17 @@ firebaseAdmin.initializeApp({
 
 const db = firebaseAdmin.firestore();
 
+const creds = {
+  host: process.env.MAIL_HOST,
+  port: process.env.MAIL_PORT,
+  auth: {
+    user: process.env.MAIL_USERNAME,
+    pass: process.env.MAIL_PASSWORD,
+  },
+};
+
+const transporter = nodemailer.createTransport(creds);
+
 const path = require("path");
 
 // Define the file path
@@ -58,6 +70,15 @@ const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
 
 // TODO: bodyParser.urlencoded({ extended: false }), bodyParser.json() these functions are passing directly to the app.post() method. This is not a good practice. You should pass these functions to the app.use() method.
 // I can't pass use it in app.use() because I am using one more parser for this endpoint: `/email-stripe-invoice` and that's why I can't use two parsers.
+
+const getFileExtension = (url = "") => {
+  if (!url.includes(".")) {
+    return null;
+  }
+  const parts = url.split(".");
+  const extension = parts.pop().split("?")[0].split("#")[0];
+  return extension.toLowerCase();
+};
 
 app.post(
   "/chargeForCookie",
@@ -280,25 +301,28 @@ app.get(
       const invoiceUrl = request.query.invoiceUrl;
 
       if (invoiceUrl) {
+        const formattedInvoiceUrl = invoiceUrl.replace(
+          "/o/invoices/",
+          "/o/invoices%2F"
+        );
+
+        const extension = getFileExtension(formattedInvoiceUrl);
+
         let mailOptions = {
           from: process.env.MAIL_FROM,
           to: email,
           subject: "Your Invoice",
-          text: "Please check this link for your invoice: " + invoiceUrl,
+          text: "Please find your attached invoice.",
+          attachments: [
+            {
+              filename: `invoice.${extension}`,
+              path: formattedInvoiceUrl,
+            },
+          ],
         };
 
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.error(error);
-            return response.status(500).send({
-              errorMessage: "Email error; please try again;",
-            });
-          } else {
-            console.log("Email sent: " + info.response);
-
-            return response.status(200).json({ status: true });
-          }
-        });
+        await transporter.sendMail(mailOptions);
+        return response.status(200).json({ status: true });
       }
 
       const orderDocRef = db.collection("completed").doc(orderId);
@@ -340,7 +364,7 @@ app.get(
           from: process.env.MAIL_FROM,
           to: email,
           subject: "Your Invoice",
-          text: "Please find attached your invoice.",
+          text: "Please find your attached invoice.",
           attachments: [
             {
               filename: "invoice.pdf",
