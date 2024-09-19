@@ -276,6 +276,30 @@ app.get(
   async (request, response) => {
     try {
       const orderId = request.query.orderId;
+      const email = request.query.email;
+      const invoiceUrl = request.query.invoiceUrl;
+
+      if (invoiceUrl) {
+        let mailOptions = {
+          from: process.env.MAIL_FROM,
+          to: email,
+          subject: "Your Invoice",
+          text: "Please check this link for your invoice: " + invoiceUrl,
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error(error);
+            return response.status(500).send({
+              errorMessage: "Email error; please try again;",
+            });
+          } else {
+            console.log("Email sent: " + info.response);
+
+            return response.status(200).json({ status: true });
+          }
+        });
+      }
 
       const orderDocRef = db.collection("completed").doc(orderId);
       const orderSnap = await orderDocRef.get();
@@ -297,9 +321,51 @@ app.get(
 
       // Create a new PDF document
       const doc = new PDFDocument();
-      // Pipe the PDF to the response object
-      doc.pipe(response);
+      const buffers = [];
+      doc.on("data", buffers.push.bind(buffers));
+      doc.on("end", async () => {
+        const pdfData = Buffer.concat(buffers);
 
+        if (!email) {
+          // Set response headers for PDF
+          response.setHeader("Content-Type", "application/pdf");
+          response.setHeader(
+            "Content-Disposition",
+            "inline; filename=invoice.pdf"
+          );
+          return response.send(pdfData);
+        }
+
+        let mailOptions = {
+          from: process.env.MAIL_FROM,
+          to: email,
+          subject: "Your Invoice",
+          text: "Please find attached your invoice.",
+          attachments: [
+            {
+              filename: "invoice.pdf",
+              content: pdfData,
+            },
+          ],
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error(error);
+            response.status(500).send({
+              errorMessage: "Email error; please try again;",
+            });
+          } else {
+            console.log("Email sent: " + info.response);
+            response.setHeader("Content-Type", "application/pdf");
+            response.setHeader(
+              "Content-Disposition",
+              "inline; filename=invoice.pdf"
+            );
+            response.send(pdfData);
+          }
+        });
+      });
       doc
         .image(imagePath, { scale: 0.2 })
         .fontSize(18)
@@ -391,10 +457,6 @@ app.get(
         });
 
       doc.end();
-
-      // Set response headers for PDF
-      response.setHeader("Content-Type", "application/pdf");
-      response.setHeader("Content-Disposition", "inline; filename=invoice.pdf");
     } catch (error) {
       console.error(error);
       response.status(500).send({
