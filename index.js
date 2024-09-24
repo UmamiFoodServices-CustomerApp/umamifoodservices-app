@@ -68,32 +68,37 @@ const defaultClient = new Client({
 
 const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
 
-app.post("/sendPasswordReset", async (req, res) => {
-  const { email } = req.body;
+app.post(
+  "/sendPasswordReset",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (req, res) => {
+    const { email } = req.body;
 
-  try {
-    // Generate password reset link
-    const resetLink = await firebaseAdmin
-      .auth()
-      .generatePasswordResetLink(email);
+    try {
+      // Generate password reset link
+      const resetLink = await firebaseAdmin
+        .auth()
+        .generatePasswordResetLink(email);
 
-    // Send email using Nodemailer
-    const mailOptions = {
-      from: process.env.MAIL_FROM,
-      to: email,
-      subject: "Password Reset",
-      text: `Click the following link to reset your password: ${resetLink}`,
-      html: `<p>Click the following link to reset your password: <a href="${resetLink}">${resetLink}</a></p>`,
-    };
+      // Send email using Nodemailer
+      const mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Password Reset",
+        text: `Click the following link to reset your password: ${resetLink}`,
+        html: `<p>Click the following link to reset your password: <a href="${resetLink}">${resetLink}</a></p>`,
+      };
 
-    await transporter.sendMail(mailOptions);
+      await transporter.sendMail(mailOptions);
 
-    res.status(200).send("Password reset email sent successfully.");
-  } catch (error) {
-    console.error("Error sending password reset email:", error);
-    res.status(500).send("Error sending password reset email.");
+      res.status(200).send("Password reset email sent successfully.");
+    } catch (error) {
+      console.error("Error sending password reset email:", error);
+      res.status(500).send("Error sending password reset email.");
+    }
   }
-});
+);
 
 // TODO: bodyParser.urlencoded({ extended: false }), bodyParser.json() these functions are passing directly to the app.post() method. This is not a good practice. You should pass these functions to the app.use() method.
 // I can't pass use it in app.use() because I am using one more parser for this endpoint: `/email-stripe-invoice` and that's why I can't use two parsers.
