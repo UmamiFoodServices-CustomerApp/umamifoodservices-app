@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const bodyParser = require("body-parser");
 const PDFDocument = require("pdfkit"); // Import the pdfkit library
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const cors = require("cors");
 
 const firebaseAdmin = require("firebase-admin");
 
@@ -67,6 +68,8 @@ const defaultClient = new Client({
 });
 
 const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
+
+app.use(cors());
 
 app.post(
   "/sendPasswordReset",
