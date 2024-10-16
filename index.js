@@ -8,6 +8,7 @@ const bodyParser = require("body-parser");
 const PDFDocument = require("pdfkit"); // Import the pdfkit library
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const cors = require("cors");
+const { getAdminInviteEmail } = require("./emails/adminInvite");
 
 const firebaseAdmin = require("firebase-admin");
 
@@ -815,6 +816,42 @@ app.post(
     } catch (error) {
       res.send({
         success: false,
+      });
+    }
+  }
+);
+
+app.post(
+  "/send-admin-invite",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (request, res) => {
+    try {
+      const { name, email } = request.body;
+      if (!name || !email) {
+        res.status(400).send({
+          errorMessage: "email and name is required",
+        });
+        return;
+      }
+
+      const resetLink = await firebaseAdmin
+        .auth()
+        .generatePasswordResetLink(email);
+
+      const mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Welcome to Umami Food Services!",
+        html: getAdminInviteEmail({ passwordLink: resetLink, name }),
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      res.send({ success: true });
+    } catch (error) {
+      res.status(500).send({
+        errorMessage: error?.message,
       });
     }
   }
