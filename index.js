@@ -53,6 +53,8 @@ const creds = {
 const transporter = nodemailer.createTransport(creds);
 
 const path = require("path");
+const { generateStrongPassword, makeFormObject } = require("./utils/auth");
+const { getCustomerWelcomeEmail } = require("./emails/customerWelcome");
 
 // Define the file path
 const imagePath = path.join(__dirname, "images", "Logo.png");
@@ -844,6 +846,101 @@ app.post(
         to: email,
         subject: "Welcome to Umami Food Services!",
         html: getAdminInviteEmail({ passwordLink: resetLink, name }),
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      res.send({ success: true });
+    } catch (error) {
+      res.status(500).send({
+        errorMessage: error?.message,
+      });
+    }
+  }
+);
+
+// When adding customer from admin portal
+app.post(
+  "/add-customer-admin",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (request, res) => {
+    try {
+      const {
+        firstName,
+        lastName,
+        phoneNumber,
+        email,
+        address1,
+        address2,
+        state,
+        city,
+        zipCode,
+      } = request.body;
+
+      const missingFields = [];
+
+      if (!firstName) missingFields.push("firstName");
+      if (!lastName) missingFields.push("lastName");
+      if (!phoneNumber) missingFields.push("phoneNumber");
+      if (!email) missingFields.push("email");
+      if (!address1) missingFields.push("address1");
+      if (!address2) missingFields.push("address2");
+      if (!state) missingFields.push("state");
+      if (!city) missingFields.push("city");
+      if (!zipCode) missingFields.push("zipCode");
+
+      if (missingFields.length > 0) {
+        return res.status(400).send({
+          errorMessage: `Missing required fields: ${missingFields.join(", ")}`,
+          missingFields,
+        });
+      }
+
+      const password = generateStrongPassword();
+
+      const fullName = `${firstName} ${lastName}`;
+
+      const user = await firebaseAdmin.auth().createUser({
+        email,
+        password,
+        emailVerified: true,
+        disabled: false,
+        displayName: fullName,
+      });
+
+      const userDocData = makeFormObject({
+        name: fullName,
+        email,
+        password,
+        confirmPassword: password,
+        phone: phoneNumber,
+        dateOfBirth: null,
+        isPrivacyAccepted: true,
+        isTermsAccepted: true,
+        address: address1,
+        secondaryAddress: address2,
+        city,
+        state,
+        zip: zipCode,
+        businessName: fullName,
+      });
+
+      await db.collection("users").doc(user.uid).set(userDocData);
+
+      const resetLink = await firebaseAdmin
+        .auth()
+        .generatePasswordResetLink(email);
+
+      const mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Welcome to Umami Food Services",
+        html: getCustomerWelcomeEmail({
+          fullName,
+          passwordLink: resetLink,
+          tempPassword: password,
+        }),
       };
 
       await transporter.sendMail(mailOptions);
