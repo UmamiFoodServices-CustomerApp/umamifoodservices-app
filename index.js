@@ -55,6 +55,12 @@ const transporter = nodemailer.createTransport(creds);
 const path = require("path");
 const { generateStrongPassword, makeFormObject } = require("./utils/auth");
 const { getCustomerWelcomeEmail } = require("./emails/customerWelcome");
+const {
+  getCustomerSignupWelcomeEmail,
+} = require("./emails/customerSignupWelcome");
+const {
+  getCustomerSignupAdminWelcome,
+} = require("./emails/customerSignupAdminWelcome");
 
 // Define the file path
 const imagePath = path.join(__dirname, "images", "Logo.png");
@@ -944,6 +950,57 @@ app.post(
       };
 
       await transporter.sendMail(mailOptions);
+
+      res.send({ success: true });
+    } catch (error) {
+      res.status(500).send({
+        errorMessage: error?.message,
+      });
+    }
+  }
+);
+
+// When customer sign up for the app
+app.post(
+  "/customer-signup-email",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (request, res) => {
+    try {
+      const { email, name } = request.body;
+
+      const missingFields = [];
+      if (!email) missingFields.push("email");
+      if (!name) missingFields.push("name");
+
+      if (missingFields.length > 0) {
+        return res.status(400).send({
+          errorMessage: `Missing required fields: ${missingFields.join(", ")}`,
+          missingFields,
+        });
+      }
+
+      // Send Email to Customer
+      const mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Welcome to Umami Food Services",
+        html: getCustomerSignupWelcomeEmail({ fullName: name }),
+      };
+      await transporter.sendMail(mailOptions);
+
+      // Send Email to Admin
+      const adminMailOptions = {
+        from: process.env.MAIL_FROM,
+        to: "gouravadmin@yopmail.com", // TODO : Change this to correct admin email once confirmation from client
+        subject: "Welcome new user to Umami Food Services!",
+        html: getCustomerSignupAdminWelcome({
+          userEmail: email,
+          adminFullName: "Umami Admin Test", // TODO : Change this to correct admin name once confirmation from client
+          userFullName: name,
+        }),
+      };
+      await transporter.sendMail(adminMailOptions);
 
       res.send({ success: true });
     } catch (error) {
