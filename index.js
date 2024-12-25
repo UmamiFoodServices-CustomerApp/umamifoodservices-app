@@ -1,4 +1,5 @@
 const express = require("express");
+const nodemailer = require("nodemailer");
 const app = express();
 require("dotenv").config();
 const { Client, Environment } = require("square");
@@ -6,6 +7,8 @@ const crypto = require("crypto");
 const bodyParser = require("body-parser");
 const PDFDocument = require("pdfkit"); // Import the pdfkit library
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const cors = require("cors");
+const { getAdminInviteEmail } = require("./emails/adminInvite");
 
 const firebaseAdmin = require("firebase-admin");
 
@@ -38,7 +41,26 @@ firebaseAdmin.initializeApp({
 
 const db = firebaseAdmin.firestore();
 
+const creds = {
+  host: process.env.MAIL_HOST,
+  port: process.env.MAIL_PORT,
+  auth: {
+    user: process.env.MAIL_USERNAME,
+    pass: process.env.MAIL_PASSWORD,
+  },
+};
+
+const transporter = nodemailer.createTransport(creds);
+
 const path = require("path");
+const { generateStrongPassword, makeFormObject } = require("./utils/auth");
+const { getCustomerWelcomeEmail } = require("./emails/customerWelcome");
+const {
+  getCustomerSignupWelcomeEmail,
+} = require("./emails/customerSignupWelcome");
+const {
+  getCustomerSignupAdminWelcome,
+} = require("./emails/customerSignupAdminWelcome");
 
 // Define the file path
 const imagePath = path.join(__dirname, "images", "Logo.png");
@@ -56,8 +78,51 @@ const defaultClient = new Client({
 
 const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
 
+app.use(cors());
+
+app.post(
+  "/sendPasswordReset",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (req, res) => {
+    const { email } = req.body;
+
+    try {
+      // Generate password reset link
+      const resetLink = await firebaseAdmin
+        .auth()
+        .generatePasswordResetLink(email);
+
+      // Send email using Nodemailer
+      const mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Password Reset",
+        text: `Click the following link to reset your password: ${resetLink}`,
+        html: `<p>Click the following link to reset your password: <a href="${resetLink}">${resetLink}</a></p>`,
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      res.status(200).send("Password reset email sent successfully.");
+    } catch (error) {
+      console.error("Error sending password reset email:", error);
+      res.status(500).send("Error sending password reset email.");
+    }
+  }
+);
+
 // TODO: bodyParser.urlencoded({ extended: false }), bodyParser.json() these functions are passing directly to the app.post() method. This is not a good practice. You should pass these functions to the app.use() method.
 // I can't pass use it in app.use() because I am using one more parser for this endpoint: `/email-stripe-invoice` and that's why I can't use two parsers.
+
+const getFileExtension = (url = "") => {
+  if (!url.includes(".")) {
+    return null;
+  }
+  const parts = url.split(".");
+  const extension = parts.pop().split("?")[0].split("#")[0];
+  return extension.toLowerCase();
+};
 
 app.post(
   "/chargeForCookie",
@@ -276,6 +341,33 @@ app.get(
   async (request, response) => {
     try {
       const orderId = request.query.orderId;
+      const email = request.query.email;
+      const invoiceUrl = request.query.invoiceUrl;
+
+      if (invoiceUrl) {
+        const formattedInvoiceUrl = invoiceUrl.replace(
+          "/o/invoices/",
+          "/o/invoices%2F"
+        );
+
+        const extension = getFileExtension(formattedInvoiceUrl);
+
+        let mailOptions = {
+          from: process.env.MAIL_FROM,
+          to: email,
+          subject: "Your Invoice",
+          text: "Please find your attached invoice.",
+          attachments: [
+            {
+              filename: `invoice.${extension}`,
+              path: formattedInvoiceUrl,
+            },
+          ],
+        };
+
+        await transporter.sendMail(mailOptions);
+        return response.status(200).json({ status: true });
+      }
 
       const orderDocRef = db.collection("completed").doc(orderId);
       const orderSnap = await orderDocRef.get();
@@ -297,9 +389,51 @@ app.get(
 
       // Create a new PDF document
       const doc = new PDFDocument();
-      // Pipe the PDF to the response object
-      doc.pipe(response);
+      const buffers = [];
+      doc.on("data", buffers.push.bind(buffers));
+      doc.on("end", async () => {
+        const pdfData = Buffer.concat(buffers);
 
+        if (!email) {
+          // Set response headers for PDF
+          response.setHeader("Content-Type", "application/pdf");
+          response.setHeader(
+            "Content-Disposition",
+            "inline; filename=invoice.pdf"
+          );
+          return response.send(pdfData);
+        }
+
+        let mailOptions = {
+          from: process.env.MAIL_FROM,
+          to: email,
+          subject: "Your Invoice",
+          text: "Please find your attached invoice.",
+          attachments: [
+            {
+              filename: "invoice.pdf",
+              content: pdfData,
+            },
+          ],
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error(error);
+            response.status(500).send({
+              errorMessage: "Email error; please try again;",
+            });
+          } else {
+            console.log("Email sent: " + info.response);
+            response.setHeader("Content-Type", "application/pdf");
+            response.setHeader(
+              "Content-Disposition",
+              "inline; filename=invoice.pdf"
+            );
+            response.send(pdfData);
+          }
+        });
+      });
       doc
         .image(imagePath, { scale: 0.2 })
         .fontSize(18)
@@ -391,10 +525,6 @@ app.get(
         });
 
       doc.end();
-
-      // Set response headers for PDF
-      response.setHeader("Content-Type", "application/pdf");
-      response.setHeader("Content-Disposition", "inline; filename=invoice.pdf");
     } catch (error) {
       console.error(error);
       response.status(500).send({
@@ -694,6 +824,188 @@ app.post(
     } catch (error) {
       res.send({
         success: false,
+      });
+    }
+  }
+);
+
+app.post(
+  "/send-admin-invite",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (request, res) => {
+    try {
+      const { name, email } = request.body;
+      if (!name || !email) {
+        res.status(400).send({
+          errorMessage: "email and name is required",
+        });
+        return;
+      }
+
+      const resetLink = await firebaseAdmin
+        .auth()
+        .generatePasswordResetLink(email);
+
+      const mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Welcome to Umami Food Services!",
+        html: getAdminInviteEmail({ passwordLink: resetLink, name }),
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      res.send({ success: true });
+    } catch (error) {
+      res.status(500).send({
+        errorMessage: error?.message,
+      });
+    }
+  }
+);
+
+// When adding customer from admin portal
+app.post(
+  "/add-customer-admin",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (request, res) => {
+    try {
+      const {
+        firstName,
+        lastName,
+        phoneNumber,
+        email,
+        address1,
+        address2,
+        state,
+        city,
+        zipCode,
+      } = request.body;
+
+      const missingFields = [];
+
+      if (!firstName) missingFields.push("firstName");
+      if (!lastName) missingFields.push("lastName");
+      if (!phoneNumber) missingFields.push("phoneNumber");
+      if (!email) missingFields.push("email");
+      if (!address1) missingFields.push("address1");
+      if (!address2) missingFields.push("address2");
+      if (!state) missingFields.push("state");
+      if (!city) missingFields.push("city");
+      if (!zipCode) missingFields.push("zipCode");
+
+      if (missingFields.length > 0) {
+        return res.status(400).send({
+          errorMessage: `Missing required fields: ${missingFields.join(", ")}`,
+          missingFields,
+        });
+      }
+
+      const password = generateStrongPassword();
+
+      const fullName = `${firstName} ${lastName}`;
+
+      const user = await firebaseAdmin.auth().createUser({
+        email,
+        password,
+        emailVerified: true,
+        disabled: false,
+        displayName: fullName,
+      });
+
+      const userDocData = makeFormObject({
+        name: fullName,
+        email,
+        password,
+        confirmPassword: password,
+        phone: phoneNumber,
+        dateOfBirth: null,
+        isPrivacyAccepted: true,
+        isTermsAccepted: true,
+        address: address1,
+        secondaryAddress: address2,
+        city,
+        state,
+        zip: zipCode,
+        businessName: fullName,
+      });
+
+      await db.collection("users").doc(user.uid).set(userDocData);
+
+      const resetLink = await firebaseAdmin
+        .auth()
+        .generatePasswordResetLink(email);
+
+      const mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Welcome to Umami Food Services",
+        html: getCustomerWelcomeEmail({
+          fullName,
+          passwordLink: resetLink,
+          tempPassword: password,
+        }),
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      res.send({ success: true });
+    } catch (error) {
+      res.status(500).send({
+        errorMessage: error?.message,
+      });
+    }
+  }
+);
+
+// When customer sign up for the app
+app.post(
+  "/customer-signup-email",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (request, res) => {
+    try {
+      const { email, name } = request.body;
+
+      const missingFields = [];
+      if (!email) missingFields.push("email");
+      if (!name) missingFields.push("name");
+
+      if (missingFields.length > 0) {
+        return res.status(400).send({
+          errorMessage: `Missing required fields: ${missingFields.join(", ")}`,
+          missingFields,
+        });
+      }
+
+      // Send Email to Customer
+      const mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Welcome to Umami Food Services",
+        html: getCustomerSignupWelcomeEmail({ fullName: name }),
+      };
+      await transporter.sendMail(mailOptions);
+
+      // Send Email to Admin
+      const adminMailOptions = {
+        from: process.env.MAIL_FROM,
+        to: "gouravadmin@yopmail.com", // TODO : Change this to correct admin email once confirmation from client
+        subject: "Welcome new user to Umami Food Services!",
+        html: getCustomerSignupAdminWelcome({
+          userEmail: email,
+          adminFullName: "Umami Admin Test", // TODO : Change this to correct admin name once confirmation from client
+          userFullName: name,
+        }),
+      };
+      await transporter.sendMail(adminMailOptions);
+
+      res.send({ success: true });
+    } catch (error) {
+      res.status(500).send({
+        errorMessage: error?.message,
       });
     }
   }
