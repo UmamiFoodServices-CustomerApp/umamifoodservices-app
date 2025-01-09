@@ -65,7 +65,7 @@ const getCustomerSignupAdminWelcome = ({
             <p class="message">Please review the user's profile in the admin panel for further action, if needed.</p>
 
             <p class="action-link">
-                <a href="https://food-app-49b33.web.app" target="_blank">View User Profile</a>
+                <a href="https://food-app-49b33.web.app/customers" target="_blank">View User Profile</a>
             </p>
 
             <div class="signature">
