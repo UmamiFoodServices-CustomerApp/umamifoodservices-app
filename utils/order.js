@@ -251,7 +251,7 @@ const htmlContent = `
 </div>
 
 <!-- Terms and Signature -->
-<div style="padding-bottom: 2.5rem; margin-top: 6rem; position: absolute; bottom: 0; left: 0; right: 0; padding-left: 2rem; padding-right: 6rem;">
+<div style="padding-bottom: 2.5rem; margin-top: 2rem; padding-left: 2rem; padding-right: 6rem; display: flex; flex-direction: column; page-break-inside: avoid; page-break-after: auto;">
   <div style="font-size: 14px; font-family: Helvetica;">
     By signing this document I/We acknowledge the receipt of invoiced products. I/We agree to pay a finance charge of 1.5% per month on all past due accounts. Umami will charge a $30 processing fee on all returned checks for ACH Customers. Claims must be made upon the time of delivery. Please weigh and inspect all items with the driver upon delivery.
   </div>
@@ -266,7 +266,6 @@ const htmlContent = `
     </div>
   </div>
 </div>
-
 `
 
 const browser = await puppeteer.launch();
