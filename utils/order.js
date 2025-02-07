@@ -97,6 +97,39 @@ const getCaseItemName = item => {
   return `${BrandName} - ${ItemName} - Ut:${itemUnit}`
 }
 
+ const applyDiscount = props => {
+  const now = new Date()
+  const start = new Date(props.OfferStartDate)
+  const end = new Date(props.OfferEndDate)
+  if (now >= start && now <= end) {
+    const discountMultiplier = (100 - Number(props.Discount)) / 100
+    const discountedPrice = Number(props.CustomerPrice) * discountMultiplier
+    return Number(Number(props.CustomerPrice) - discountedPrice).toFixed(2)
+  }
+  return 0
+}
+
+
+ const calculateTotalCost = (order) => {
+  let cost = order.items.reduce((total, item) => {
+    const primaryQuantity = Number(item?.primaryQuantity || 0);
+    const customerPrice = Number(item?.CustomerPrice || 0);
+    const secondaryQuantity = Number(item?.secondaryQuantity || 0);
+    const customerUnitPrice = Number(item?.CustomerUnitPrice || 0);
+
+    const totalCustomerPrice = primaryQuantity * customerPrice;
+    const totalUnitPrice = secondaryQuantity * customerUnitPrice;
+
+    const discountCustomerPrice = applyDiscount({ ...item, CustomerPrice: totalCustomerPrice }) ?? 0;
+    const discountUnitPrice = applyDiscount({ ...item, CustomerPrice: totalUnitPrice }) ?? 0;
+
+    return total + (totalCustomerPrice - discountCustomerPrice) + (totalUnitPrice - discountUnitPrice);
+  }, 0);
+
+  const discount = order?.discount ? (cost * order.discount) / 100 : 0;
+  return cost - discount;
+};
+
 
 const getDeliveryTime = (
   date = moment.unix(),
@@ -114,71 +147,29 @@ const getDeliveryTime = (
 
 async function generatePdf(order, outputPath) {
 
-  const itemRows = order.items.map((item, index) => {
-    return `
-      ${item.primaryQuantity > 0 ? `
-        <div style="margin-top: 0.75rem;">
-          <div style="display: flex; flex-direction: row; justify-content: space-between; color: #4a4a4a; font-family: Helvetica;">
-            <!-- QTY -->
-            <div style="min-width: 3rem; text-align: center; font-size: 14px; color: #2d3748; font-family: Helvetica;">
-              ${parseInt(item.primaryQuantity) || 0}
-            </div>
-            <!-- UOM -->
-            <div style="min-width: 3rem; text-align: left; padding-left: 0.7rem; font-size: 14px; font-family: Helvetica;">
-              Case
-            </div>
-            <!-- ITEM DESCRIPTION -->
-            <div style="min-width: 25vh; text-align: left; padding-left: 0.7rem; font-size: 14px; font-family: Helvetica;">
-              ${getCaseItemName(item)}
-            </div>
-            <!-- WEIGHT (Center aligned) -->
-            <div style="min-width: 5rem; text-align: center; font-size: 14px; font-family: Helvetica;">
-              -
-            </div>
-            <!-- PRICE RATE (Center aligned) -->
-            <div style="min-width: 5rem; text-align: center; font-size: 14px; font-family: Helvetica;">
-              ${formatMoney(item.CustomerPrice)}
-            </div>
-            <!-- TOTAL (Center aligned) -->
-            <div style="min-width: 6rem; text-align: center; font-size: 14px; font-family: Helvetica-Bold;">
-              ${formatMoney(item.primaryQuantity * item.CustomerPrice)}
-            </div>
-          </div>
-        </div>
-      ` : ''}
-      
-      ${item.secondaryQuantity > 0 ? `
-        <div style="margin-top: 0.75rem;">
-          <div style="display: flex; flex-direction: row; justify-content: space-between; color: #4a4a4a; font-family: Helvetica;">
-            <!-- QTY -->
-            <div style="min-width: 3rem; text-align: center; font-size: 14px; color: #2d3748; font-family: Helvetica;">
-              ${parseInt(item.secondaryQuantity) || 0}
-            </div>
-            <!-- UOM -->
-            <div style="min-width: 3rem; text-align: left; padding-left: 0.7rem; font-size: 14px; font-family: Helvetica;">
-              Unit
-            </div>
-            <!-- ITEM DESCRIPTION -->
-            <div style="min-width: 25vh; text-align: left; padding-left: 0.7rem; font-size: 14px; font-family: Helvetica;">
-              ${getUnitItemName(item)}
-            </div>
-            <!-- WEIGHT (Center aligned) -->
-            <div style="min-width: 5rem; text-align: center; font-size: 14px; font-family: Helvetica;">
-              ${item.SoldByUnit ? item.Unit : '-'}
-            </div>
-            <!-- PRICE RATE (Center aligned) -->
-            <div style="min-width: 5rem; text-align: center; font-size: 14px; font-family: Helvetica;">
-              ${formatMoney(item.CustomerUnitPrice)}
-            </div>
-            <!-- TOTAL (Center aligned) -->
-            <div style="min-width: 6rem; text-align: center; font-size: 14px; font-family: Helvetica-Bold;">
-              ${formatMoney(item.secondaryQuantity * item.CustomerUnitPrice)}
-            </div>
-          </div>
-        </div>
-      ` : ''}
-    `;
-  }).join('');
+  const itemRows = order.items.map((item) => `
+  ${item.primaryQuantity > 0 ? `
+    <div style="display: flex; flex-direction: row; color: #4a4a4a; font-family: Helvetica; padding: 6px 0;">
+      <div style="width: 10%; text-align: center;">${parseInt(item.primaryQuantity) || 0}</div>
+      <div style="width: 15%; text-align: center;">Case</div>
+      <div style="width: 50%; text-align: left;">${getCaseItemName(item)}</div>
+      <div style="width: 15%; text-align: center;">-</div>
+      <div style="width: 15%; text-align: center;">${formatMoney(item.CustomerPrice)}</div>
+      <div style="width: 20%; text-align: center; font-weight: bold;">${formatMoney(item.primaryQuantity * item.CustomerPrice)}</div>
+    </div>
+  ` : ''}
+
+  ${item.secondaryQuantity > 0 ? `
+    <div style="display: flex; flex-direction: row; color: #4a4a4a; font-family: Helvetica; padding: 6px 0;">
+      <div style="width: 10%; text-align: center;">${parseInt(item.secondaryQuantity) || 0}</div>
+      <div style="width: 15%; text-align: center;">Unit</div>
+      <div style="width: 50%; text-align: left;">${getUnitItemName(item)}</div>
+      <div style="width: 15%; text-align: center;">${item.SoldByUnit ? item.Unit : '-'}</div>
+      <div style="width: 15%; text-align: center;">${formatMoney(item.CustomerUnitPrice)}</div>
+      <div style="width: 20%; text-align: center; font-weight: bold;">${formatMoney(item.secondaryQuantity * item.CustomerUnitPrice)}</div>
+    </div>
+  ` : ''}
+`).join('');
   const imagePath = './images/Logo.png';  
  const imageBase64 = fs.readFileSync(imagePath, { encoding: 'base64' });
   
@@ -225,49 +216,65 @@ const htmlContent = `
 
 <!-- Items Table -->
 <div style="padding-top: 2.5rem; overflow-x: auto; padding-left: 0.5rem;">
-  <div style="display: flex; flex-direction: row; justify-content: space-between; font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin-bottom: 1rem;">
-    <div style="min-width: 3rem; width: 10%; text-align: center;">QTY</div>
-    <div style="min-width: 3rem; width: 10%; text-align: center;">UOM</div>
-    <div style="min-width: 25vh; width: 30%; text-align: left; padding-left: 1.25rem;">ITEM DESCRIPTION</div>
-    <div style="min-width: 5rem; width: 13%; text-align: center;">WEIGHT</div>
-    <div style="min-width: 5rem; width: 13%; text-align: center;">PRICE RATE</div>
-    <div style="min-width: 6rem; width: 20%; text-align: center;">TOTAL</div>
+  <!-- Table Header -->
+  <div style="display: flex; flex-direction: row; font-weight: bold; font-family: Helvetica; color: #1a202c; margin-bottom: 1rem;  padding-bottom: 8px;">
+    <div style="width: 10%; text-align: center;">QTY</div>
+    <div style="width: 15%; text-align: center;">UOM</div>
+    <div style="width: 50%; text-align: left;">ITEM DESCRIPTION</div>
+    <div style="width: 15%; text-align: center;">WEIGHT</div>
+    <div style="width: 15%; text-align: center;">PRICE RATE</div>
+    <div style="width: 20%; text-align: center;">TOTAL</div>
   </div>
-  ${itemRows} 
+
+  ${itemRows}
 </div>
 
 <!-- Balance Due -->
 <div style="height: 2px; width: 100%; background-color: #e2e8f0; margin-top: 30px; margin-bottom: 4px;"></div>
-
 <div style="display: flex; justify-content: flex-end; margin-right: 1.25rem;">
   <div style="display: flex; flex-direction: row; justify-content: space-between; font-size: 16px; font-family: Helvetica; color: #2d3748; margin-top: 0.5rem;">
     <div style="text-align: left; padding-right: 2.5rem;">
       <p style="font-weight: bold; font-family: Helvetica-Bold; color: #000;">BALANCE DUE</p>
     </div>
     <div style="text-align: left;">
-      <p style="font-weight: bold; font-family: Helvetica-Bold; color: #000;">$65.00</p>
+      <p style="font-weight: bold; font-family: Helvetica-Bold; color: #000;">${formatMoney(calculateTotalCost(order))}</p>
     </div>
   </div>
 </div>
+<!-- Balance Due -->
 
-<!-- Terms and Signature -->
-<div style="position: relative; min-height: 55vh; display: flex; flex-direction: column;">
-  <div style="flex-grow: 1;"></div> <!-- Pushes content down -->
-  <div style="position: absolute; bottom: 0; left: 0; width: 100%; padding: 2.5rem 2rem; background: white; page-break-inside: avoid; page-break-after: auto;">
-    <div style="font-size: 14px; font-family: Helvetica;">
-      By signing this document I/We acknowledge the receipt of invoiced products. I/We agree to pay a finance charge of 1.5% per month on all past due accounts. Umami will charge a $30 processing fee on all returned checks for ACH Customers. Claims must be made upon the time of delivery. Please weigh and inspect all items with the driver upon delivery.
+
+<div id="terms-section" style="
+position: absolute;
+bottom: 0;
+left: 0;
+width: 100%;
+background: white;
+font-size: 14px;
+font-family: Arial, sans-serif;
+break-inside: avoid;
+">
+<div style="max-width: 800px; margin: 0 auto;">
+  <div style="margin-bottom: 20px;">
+    By signing this document, I/We acknowledge the receipt of invoiced products.
+    I/We agree to pay a finance charge of 1.5% per month on all past due accounts.
+    Umami will charge a $30 processing fee on all returned checks for ACH Customers.
+    Claims must be made upon the time of delivery. Please weigh and inspect all
+    items with the driver upon delivery.
+  </div>
+  <!-- Signature Section -->
+  <div style="display: flex; flex-direction: row; color: #4A4A4A; gap: 4rem;">
+    <div style="flex: 1;">
+      <p>Sign:</p>
+      <div style="width: 100%; height: 0.5px; background-color: #E2E8F0;"></div>
     </div>
-    <div style="display: flex; flex-direction: row; margin-top: 0.5rem; color: #4A4A4A;">
-      <div style="width: 32%;">
-        <p style="font-family: Helvetica;">Sign:</p>
-        <div style="width: 100%; height: 0.5px; background-color: #E2E8F0; margin-top: -8px;"></div>
-      </div>
-      <div style="margin-left: 4rem; width: 32%;">
-        <p style="font-family: Helvetica;">Date:</p>
-        <div style="width: 100%; height: 0.5px; background-color: #E2E8F0; margin-top: -8px;"></div>
-      </div>
+    <div style="flex: 1;">
+      <p>Date:</p>
+      <div style="width: 100%; height: 0.5px; background-color: #E2E8F0;"></div>
     </div>
   </div>
+</div>
+</div>
 </div>
 `
 
