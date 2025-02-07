@@ -251,18 +251,21 @@ const htmlContent = `
 </div>
 
 <!-- Terms and Signature -->
-<div style="padding-bottom: 2.5rem; margin-top: 2rem; padding-left: 2rem; padding-right: 6rem; display: flex; flex-direction: column; page-break-inside: avoid; page-break-after: auto;">
-  <div style="font-size: 14px; font-family: Helvetica;">
-    By signing this document I/We acknowledge the receipt of invoiced products. I/We agree to pay a finance charge of 1.5% per month on all past due accounts. Umami will charge a $30 processing fee on all returned checks for ACH Customers. Claims must be made upon the time of delivery. Please weigh and inspect all items with the driver upon delivery.
-  </div>
-  <div style="display: flex; flex-direction: row; margin-top: 2rem; color: #4A4A4A;">
-    <div style="width: 32%;">
-      <p style="font-family: Helvetica;">Sign:</p>
-      <div style="width: 100%; height: 0.5px; background-color: #E2E8F0; margin-top: -8px;"></div>
+<div style="position: relative; min-height: 55vh; display: flex; flex-direction: column;">
+  <div style="flex-grow: 1;"></div> <!-- Pushes content down -->
+  <div style="position: absolute; bottom: 0; left: 0; width: 100%; padding: 2.5rem 2rem; background: white; page-break-inside: avoid; page-break-after: auto;">
+    <div style="font-size: 14px; font-family: Helvetica;">
+      By signing this document I/We acknowledge the receipt of invoiced products. I/We agree to pay a finance charge of 1.5% per month on all past due accounts. Umami will charge a $30 processing fee on all returned checks for ACH Customers. Claims must be made upon the time of delivery. Please weigh and inspect all items with the driver upon delivery.
     </div>
-    <div style="margin-left: 4rem; width: 32%;">
-      <p style="font-family: Helvetica;">Date:</p>
-      <div style="width: 100%; height: 0.5px; background-color: #E2E8F0; margin-top: -8px;"></div>
+    <div style="display: flex; flex-direction: row; margin-top: 0.5rem; color: #4A4A4A;">
+      <div style="width: 32%;">
+        <p style="font-family: Helvetica;">Sign:</p>
+        <div style="width: 100%; height: 0.5px; background-color: #E2E8F0; margin-top: -8px;"></div>
+      </div>
+      <div style="margin-left: 4rem; width: 32%;">
+        <p style="font-family: Helvetica;">Date:</p>
+        <div style="width: 100%; height: 0.5px; background-color: #E2E8F0; margin-top: -8px;"></div>
+      </div>
     </div>
   </div>
 </div>
