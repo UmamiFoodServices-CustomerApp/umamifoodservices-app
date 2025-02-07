@@ -2,7 +2,7 @@ module.exports = {
     name: 'Umami Food Services',
     email: 'sales@umamiservices.com',
     website: 'www.umamiservices.com',
-    address: '14841 Moran St',
+    address: '14805 Moran St',
     city: 'Westminster',
     state: 'CA',
     zip: '92683',
