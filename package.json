@@ -5,9 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js",
-    "puppeteer-vps-setup": "sudo apt-get install libpangocairo-1.0-0 libx11-xcb1 libxcomposite1 libxcursor1 libxdamage1 libxi6 libxtst6 libnss3 libcups2 libxss1 libxrandr2 libgconf-2-4 libasound2 libatk1.0-0 libgtk-3-0",
-    "prestart": "npm run puppeteer-vps-setup && npx puppeteer browsers install chrome"
+    "start": "nodemon index.js"
   },
   "dependencies": {
     "aws-sdk": "^2.1677.0",
