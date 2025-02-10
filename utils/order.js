@@ -81,20 +81,22 @@ const getItemFinalAmount = (item) =>
   (item?.primaryQuantity ?? 1) * (item?.CustomerPrice ?? 1) +
   (item?.secondaryQuantity ?? 0) * (item?.CustomerUnitPrice ?? 1);
 
-const getCaseItemName = (item) => {
-  const BrandName = item?.Brand || "";
-  const ItemName = item?.Name || "";
-  const itemCase = item?.primaryQuantity || 0;
-
-  return `${BrandName} - ${ItemName} - Cs:${itemCase}`;
-};
-const getUnitItemName = (item) => {
-  const BrandName = item?.Brand || "";
-  const ItemName = item?.Name || "";
-  const itemUnit = item?.secondaryQuantity || 0;
-
-  return `${BrandName} - ${ItemName} - Ut:${itemUnit}`;
-};
+ const getCaseItemName = item => {
+    const BrandName = item?.Brand || ''
+    const ItemName = item?.Name || ''
+    const itemCase = item?.primaryQuantity || 0
+    const itemUnit = item?.secondaryQuantity || 0
+  
+    return `${BrandName} - ${ItemName} - Cs: ${itemCase} - Ut: ${itemUnit}`
+  }
+ const getUnitItemName = item => {
+    const BrandName = item?.Brand || ''
+    const ItemName = item?.Name || ''
+    const itemCase = item?.primaryQuantity || 0
+    const itemUnit = item?.secondaryQuantity || 0
+  
+    return `${BrandName} - ${ItemName} - Cs: ${itemCase} - Ut: ${itemUnit}`
+  }
 
 const applyDiscount = (props) => {
   const now = new Date();
