@@ -51,31 +51,6 @@ const getItemRate = (item) => {
   return formatMoney(CustomerPrice, false);
 };
 
-const getItemNamePrefix = (item) => {
-  const { primaryQuantity, secondaryQuantity } = item;
-
-  const primaryPrefix = "Case";
-  const secondaryPrefix =
-    item.Unit && item.Unit.toLowerCase().includes("lb") ? "Lbs" : "Unit";
-
-  if (secondaryQuantity > 0 && primaryQuantity > 0) {
-    return `${primaryPrefix} / ${secondaryPrefix}`;
-  }
-
-  if (primaryQuantity > 0) {
-    return primaryPrefix;
-  }
-  if (secondaryQuantity > 0) {
-    return secondaryPrefix;
-  }
-
-  return primaryPrefix;
-};
-
-const getItemName = (item) => {
-  const prefix = getItemNamePrefix(item);
-  return `${prefix} - ${item.Name}`;
-};
 
 const getItemFinalAmount = (item) =>
   (item?.primaryQuantity ?? 1) * (item?.CustomerPrice ?? 1) +
@@ -94,6 +69,16 @@ const getItemFinalAmount = (item) =>
     const ItemName = item?.Name || ''
     const itemCase = item?.primaryQuantity || 0
     const itemUnit = item?.secondaryQuantity || 0
+  
+    return `${BrandName} - ${ItemName} - Cs: ${itemCase} - Ut: ${itemUnit}`
+  }
+
+
+  const getItemName = item => {
+    const BrandName = item?.Brand || ''
+    const ItemName = item?.Name || ''
+    const itemCase = item?.Case || 0
+    const itemUnit = item?.Unit || 0
   
     return `${BrandName} - ${ItemName} - Cs: ${itemCase} - Ut: ${itemUnit}`
   }
@@ -162,7 +147,7 @@ async function generatePdf(order, outputPath) {
         parseInt(item.primaryQuantity) || 0
       }</div>
       <div style="width: 15%; text-align: center;">Case</div>
-      <div style="width: 50%; text-align: left;">${getCaseItemName(item)}</div>
+      <div style="width: 50%; text-align: left;">${getItemName(item)}</div>
       <div style="width: 15%; text-align: center;">-</div>
       <div style="width: 15%; text-align: center;">${formatMoney(
         item.CustomerPrice
@@ -183,7 +168,7 @@ async function generatePdf(order, outputPath) {
         parseInt(item.secondaryQuantity) || 0
       }</div>
       <div style="width: 15%; text-align: center;">Unit</div>
-      <div style="width: 50%; text-align: left;">${getUnitItemName(item)}</div>
+      <div style="width: 50%; text-align: left;">${getItemName(item)}</div>
       <div style="width: 15%; text-align: center;">${
         item.SoldByUnit ? item.Unit : "-"
       }</div>
@@ -262,9 +247,9 @@ async function generatePdf(order, outputPath) {
 </div>
 
 <!-- Items Table -->
-<div style="padding-top: 2.5rem; overflow-x: auto; padding-left: 0.5rem;">
+<div style="padding-top: 1.5rem; overflow-x: auto; padding-left: 0.5rem;">
   <!-- Table Header -->
-  <div style="display: flex; flex-direction: row; font-weight: bold; font-family: Helvetica; color: #1a202c; margin-bottom: 1rem;  padding-bottom: 8px;">
+  <div style="display: flex; flex-direction: row; font-weight: bold; font-family: Helvetica; color: #1a202c; margin-bottom: 0.5rem;  padding-bottom: 8px;">
     <div style="width: 10%; text-align: center;">QTY</div>
     <div style="width: 15%; text-align: center;">UOM</div>
     <div style="width: 50%; text-align: left;">ITEM DESCRIPTION</div>
@@ -352,7 +337,6 @@ module.exports = {
   formatMoney,
   getItemQuantity,
   getItemRate,
-  getItemNamePrefix,
   getItemName,
   getItemFinalAmount,
   getDeliveryTime,
