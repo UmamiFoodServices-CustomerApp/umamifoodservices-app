@@ -51,37 +51,35 @@ const getItemRate = (item) => {
   return formatMoney(CustomerPrice, false);
 };
 
-
 const getItemFinalAmount = (item) =>
   (item?.primaryQuantity ?? 1) * (item?.CustomerPrice ?? 1) +
   (item?.secondaryQuantity ?? 0) * (item?.CustomerUnitPrice ?? 1);
 
- const getCaseItemName = item => {
-    const BrandName = item?.Brand || ''
-    const ItemName = item?.Name || ''
-    const itemCase = item?.primaryQuantity || 0
-    const itemUnit = item?.secondaryQuantity || 0
-  
-    return `${BrandName} - ${ItemName} - Cs: ${itemCase} - Ut: ${itemUnit}`
-  }
- const getUnitItemName = item => {
-    const BrandName = item?.Brand || ''
-    const ItemName = item?.Name || ''
-    const itemCase = item?.primaryQuantity || 0
-    const itemUnit = item?.secondaryQuantity || 0
-  
-    return `${BrandName} - ${ItemName} - Cs: ${itemCase} - Ut: ${itemUnit}`
-  }
+const getCaseItemName = (item) => {
+  const BrandName = item?.Brand || "";
+  const ItemName = item?.Name || "";
+  const itemCase = item?.primaryQuantity || 0;
+  const itemUnit = item?.secondaryQuantity || 0;
 
+  return `${BrandName} - ${ItemName} - Cs: ${itemCase} - Ut: ${itemUnit}`;
+};
+const getUnitItemName = (item) => {
+  const BrandName = item?.Brand || "";
+  const ItemName = item?.Name || "";
+  const itemCase = item?.primaryQuantity || 0;
+  const itemUnit = item?.secondaryQuantity || 0;
 
-  const getItemName = item => {
-    const BrandName = item?.Brand || ''
-    const ItemName = item?.Name || ''
-    const itemCase = item?.Case || 0
-    const itemUnit = item?.Unit || 0
-  
-    return `${BrandName} - ${ItemName} - Cs: ${itemCase} - Ut: ${itemUnit}`
-  }
+  return `${BrandName} - ${ItemName} - Cs: ${itemCase} - Ut: ${itemUnit}`;
+};
+
+const getItemName = (item) => {
+  const BrandName = item?.Brand || "";
+  const ItemName = item?.Name || "";
+  const itemCase = item?.Case || 0;
+  const itemUnit = item?.Unit || 0;
+
+  return `${BrandName} - ${ItemName} - Cs: ${itemCase} - Ut: ${itemUnit}`;
+};
 
 const applyDiscount = (props) => {
   const now = new Date();
@@ -136,6 +134,10 @@ const getDeliveryTime = (
 };
 
 async function generatePdf(order, outputPath) {
+  const hasWeightableItems = order.items.some(
+    (item) => item.isWeightable && item.weight
+  );
+
   const itemRows = order.items
     .map(
       (item) => `
@@ -148,7 +150,13 @@ async function generatePdf(order, outputPath) {
       }</div>
       <div style="width: 15%; text-align: center;">Case</div>
       <div style="width: 50%; text-align: left;">${getItemName(item)}</div>
-      <div style="width: 15%; text-align: center;">-</div>
+      ${
+        hasWeightableItems
+          ? `<div style="width: 15%; text-align: center;">
+            ${item.weight || "-"}
+          </div>`
+          : ""
+      }
       <div style="width: 15%; text-align: center;">${formatMoney(
         item.CustomerPrice
       )}</div>
@@ -253,7 +261,11 @@ async function generatePdf(order, outputPath) {
     <div style="width: 10%; text-align: center;">QTY</div>
     <div style="width: 15%; text-align: center;">UOM</div>
     <div style="width: 50%; text-align: left;">ITEM DESCRIPTION</div>
-    <div style="width: 15%; text-align: center;">WEIGHT</div>
+    ${
+      hasWeightableItems
+        ? '<div style="width: 15%; text-align: center;">WEIGHT</div>'
+        : ""
+    }
     <div style="width: 15%; text-align: center;">PRICE RATE</div>
     <div style="width: 20%; text-align: center;">TOTAL</div>
   </div>
