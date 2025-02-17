@@ -177,9 +177,13 @@ async function generatePdf(order, outputPath) {
       }</div>
       <div style="width: 15%; text-align: center;">Unit</div>
       <div style="width: 50%; text-align: left;">${getItemName(item)}</div>
-      <div style="width: 15%; text-align: center;">${
-        item.SoldByUnit ? item.Unit : "-"
-      }</div>
+      ${
+        hasWeightableItems
+          ? `<div style="width: 15%; text-align: center;">
+            ${item.weight || "-"}
+          </div>`
+          : ""
+      }
       <div style="width: 15%; text-align: center;">${formatMoney(
         item.CustomerUnitPrice
       )}</div>
