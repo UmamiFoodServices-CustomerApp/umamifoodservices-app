@@ -93,15 +93,22 @@ const applyDiscount = (props) => {
   return 0;
 };
 
+const extractWeight = input => {
+  const match = input?.match(/^\d*\.?\d+/)
+  return match ? parseFloat(match[0]) : null
+}
+
 const calculateTotalCost = (order) => {
   let cost = order.items.reduce((total, item) => {
     const primaryQuantity = Number(item?.primaryQuantity || 0);
     const customerPrice = Number(item?.CustomerPrice || 0);
     const secondaryQuantity = Number(item?.secondaryQuantity || 0);
     const customerUnitPrice = Number(item?.CustomerUnitPrice || 0);
+    const isWeightable = item?.isWeightable && extractWeight(item?.weight) > 0
+    const weightableCost = extractWeight(item?.weight) * customerUnitPrice
 
     const totalCustomerPrice = primaryQuantity * customerPrice;
-    const totalUnitPrice = secondaryQuantity * customerUnitPrice;
+    const totalUnitPrice =isWeightable ? weightableCost :  secondaryQuantity * customerUnitPrice;
 
     const discountCustomerPrice =
       applyDiscount({ ...item, CustomerPrice: totalCustomerPrice }) ?? 0;
@@ -133,9 +140,26 @@ const getDeliveryTime = (
   return moment(date * 1000).format(outputFormat);
 };
 
+
+ const getCaseTotal = item => {
+  if (item?.isWeightable && extractWeight(item?.weight) > 0) {
+    return formatMoney(extractWeight(item?.weight) * item?.CustomerUnitPrice)
+  }
+
+  return formatMoney(item?.primaryQuantity * item?.CustomerPrice)
+}
+
+ const getUnitTotal = item => {
+  if (item?.isWeightable && extractWeight(item?.weight) > 0) {
+    return formatMoney(extractWeight(item?.weight) * item?.CustomerUnitPrice)
+  }
+
+  return formatMoney(item?.secondaryQuantity * item?.CustomerUnitPrice)
+}
+
 async function generatePdf(order, outputPath) {
   const hasWeightableItems = order.items.some(
-    (item) => item.isWeightable && item.weight
+    (item) => item.isWeightable && extractWeight(item.weight)
   );
 
   const itemRows = order.items
@@ -153,16 +177,14 @@ async function generatePdf(order, outputPath) {
       ${
         hasWeightableItems
           ? `<div style="width: 15%; text-align: center;">
-            ${item.weight || "-"}
+            ${extractWeight(item.weight) || "-"}
           </div>`
           : ""
       }
       <div style="width: 15%; text-align: center;">${formatMoney(
         item.CustomerPrice
       )}</div>
-      <div style="width: 20%; text-align: center; font-weight: bold;">${formatMoney(
-        item.primaryQuantity * item.CustomerPrice
-      )}</div>
+      <div style="width: 20%; text-align: center; font-weight: bold;">${getCaseTotal(item)}</div>
     </div>
   `
       : ""
@@ -180,16 +202,14 @@ async function generatePdf(order, outputPath) {
       ${
         hasWeightableItems
           ? `<div style="width: 15%; text-align: center;">
-            ${item.weight || "-"}
+            ${extractWeight(item.weight) || "-"}
           </div>`
           : ""
       }
       <div style="width: 15%; text-align: center;">${formatMoney(
         item.CustomerUnitPrice
       )}</div>
-      <div style="width: 20%; text-align: center; font-weight: bold;">${formatMoney(
-        item.secondaryQuantity * item.CustomerUnitPrice
-      )}</div>
+      <div style="width: 20%; text-align: center; font-weight: bold;">${getUnitTotal(item)}</div>
     </div>
   `
       : ""
