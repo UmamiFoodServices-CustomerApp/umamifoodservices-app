@@ -8,14 +8,11 @@ const bodyParser = require("body-parser");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const cors = require("cors");
 const { getAdminInviteEmail } = require("./emails/adminInvite");
-const fs = require('fs');
-
+const fs = require("fs");
 
 const firebaseAdmin = require("firebase-admin");
 
-const {
-  generatePdf
-} = require("./utils/order");
+const { generatePdf } = require("./utils/order");
 
 const serviceAccount = {
   type: "service_account",
@@ -340,6 +337,7 @@ app.get(
       const orderId = request.query.orderId;
       const email = request.query.email;
       const invoiceUrl = request.query.invoiceUrl;
+      const isActiveOrder = request.query.isActiveOrder;
 
       if (invoiceUrl) {
         const formattedInvoiceUrl = invoiceUrl.replace(
@@ -366,58 +364,57 @@ app.get(
         return response.status(200).json({ status: true });
       }
 
-      const orderDocRef = db.collection("completed").doc(orderId);
+      const orderDocRef = db
+        .collection(isActiveOrder ? "confirmed" : "completed")
+        .doc(orderId);
       const orderSnap = await orderDocRef.get();
 
       const order = orderSnap?.data?.();
 
+      const outputPath = "output_invoice.pdf";
 
-      const outputPath = 'output_invoice.pdf'; 
-
-      await generatePdf(order, outputPath); 
+      await generatePdf(order, outputPath);
 
       const pdfData = fs.readFileSync(outputPath);
 
+      if (!email) {
+        response.setHeader("Content-Type", "application/pdf");
+        response.setHeader(
+          "Content-Disposition",
+          "inline; filename=invoice.pdf"
+        );
+        return response.send(pdfData);
+      }
 
-        if (!email) {
+      let mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Your Invoice",
+        text: "Please find your attached invoice.",
+        attachments: [
+          {
+            filename: "invoice.pdf",
+            content: pdfData,
+          },
+        ],
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error(error);
+          response.status(500).send({
+            errorMessage: "Email error; please try again;",
+          });
+        } else {
+          console.log("Email sent: " + info.response);
           response.setHeader("Content-Type", "application/pdf");
           response.setHeader(
             "Content-Disposition",
             "inline; filename=invoice.pdf"
           );
-          return response.send(pdfData);
+          response.send(pdfData);
         }
-
-        let mailOptions = {
-          from: process.env.MAIL_FROM,
-          to: email,
-          subject: "Your Invoice",
-          text: "Please find your attached invoice.",
-          attachments: [
-            {
-              filename: "invoice.pdf",
-              content: pdfData,
-            },
-          ],
-        };
-
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.error(error);
-            response.status(500).send({
-              errorMessage: "Email error; please try again;",
-            });
-          } else {
-            console.log("Email sent: " + info.response);
-            response.setHeader("Content-Type", "application/pdf");
-            response.setHeader(
-              "Content-Disposition",
-              "inline; filename=invoice.pdf"
-            );
-            response.send(pdfData);
-          }
-        });
-
+      });
     } catch (error) {
       console.error(error);
       response.status(500).send({
