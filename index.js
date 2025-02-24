@@ -337,7 +337,7 @@ app.get(
       const orderId = request.query.orderId;
       const email = request.query.email;
       const invoiceUrl = request.query.invoiceUrl;
-      const isActiveOrder = request.query.isActiveOrder;
+      const isActiveOrder = request.query.orderStatus === "active";
 
       if (invoiceUrl) {
         const formattedInvoiceUrl = invoiceUrl.replace(
