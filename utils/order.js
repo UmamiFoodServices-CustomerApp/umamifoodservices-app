@@ -94,8 +94,15 @@ const applyDiscount = (props) => {
 };
 
 const extractWeight = input => {
-  const match = input?.match(/^\d*\.?\d+/)
-  return match ? parseFloat(match[0]) : null
+  try {
+    if (!input) {
+      return 0
+    }
+    const match = input?.match(/^\d+(\.\d+)?/)
+    return match ? parseFloat(match[0]) : 0
+  } catch (error) {
+    console.log('🚀 ~ error:', error)
+  }
 }
 
 const calculateTotalCost = (order) => {
@@ -105,7 +112,7 @@ const calculateTotalCost = (order) => {
     const secondaryQuantity = Number(item?.secondaryQuantity || 0);
     const customerUnitPrice = Number(item?.CustomerUnitPrice || 0);
     const isWeightable = item?.isWeightable && extractWeight(item?.weight) > 0
-    const weightableCost = extractWeight(item?.weight) * customerUnitPrice
+    const weightableCost =isWeightable ?  extractWeight(item?.weight) * customerUnitPrice : 0
 
     const totalCustomerPrice = primaryQuantity * customerPrice;
     const totalUnitPrice =isWeightable ? weightableCost :  secondaryQuantity * customerUnitPrice;
@@ -158,10 +165,9 @@ const getDeliveryTime = (
 }
 
 async function generatePdf(order, outputPath) {
-  const hasWeightableItems = order.items.some(
-    (item) => item.isWeightable && extractWeight(item.weight)
+  const hasWeightableItems = order?.items?.some(
+    (item) => item.isWeightable && extractWeight(item.weight) > 0
   );
-
   const itemRows = order.items
     .map(
       (item) => `
@@ -189,9 +195,8 @@ async function generatePdf(order, outputPath) {
   `
       : ""
   }
-
   ${
-    item.secondaryQuantity > 0
+    item.secondaryQuantity > 0 || extractWeight(item?.weight) > 0
       ? `
     <div style="display: flex; flex-direction: row; color: #4a4a4a; font-family: Helvetica; padding: 6px 0;">
       <div style="width: 10%; text-align: center;">${
