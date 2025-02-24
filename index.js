@@ -377,6 +377,8 @@ app.get(
 
       const pdfData = fs.readFileSync(outputPath);
 
+      updateDoc(orderDocRef, { generateNewInvoice: false });
+
       if (!email) {
         response.setHeader("Content-Type", "application/pdf");
         response.setHeader(
