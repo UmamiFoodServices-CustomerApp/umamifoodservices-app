@@ -93,19 +93,19 @@ const applyDiscount = (props) => {
   return 0;
 };
 
-const extractWeight = input => {
+const extractWeight = (input) => {
   try {
     if (!input) {
-      return 0
+      return 0;
     }
-    const inputStr = input.toString()
+    const inputStr = input.toString();
 
-    const match = inputStr?.match(/^\d+(\.\d+)?/)
-    return match ? parseFloat(match[0]) : 0
+    const match = inputStr?.match(/^\d+(\.\d+)?/);
+    return match ? parseFloat(match[0]) : 0;
   } catch (error) {
-    console.log('🚀 ~ error:', error)
+    console.log("🚀 ~ error:", error);
   }
-}
+};
 
 const calculateTotalCost = (order) => {
   let cost = order.items.reduce((total, item) => {
@@ -113,11 +113,15 @@ const calculateTotalCost = (order) => {
     const customerPrice = Number(item?.CustomerPrice || 0);
     const secondaryQuantity = Number(item?.secondaryQuantity || 0);
     const customerUnitPrice = Number(item?.CustomerUnitPrice || 0);
-    const isWeightable = item?.isWeightable && extractWeight(item?.weight) > 0
-    const weightableCost =isWeightable ?  extractWeight(item?.weight) * customerUnitPrice : 0
+    const isWeightable = item?.isWeightable && extractWeight(item?.weight) > 0;
+    const weightableCost = isWeightable
+      ? extractWeight(item?.weight) * customerUnitPrice
+      : 0;
 
     const totalCustomerPrice = primaryQuantity * customerPrice;
-    const totalUnitPrice =isWeightable ? weightableCost :  secondaryQuantity * customerUnitPrice;
+    const totalUnitPrice = isWeightable
+      ? weightableCost
+      : secondaryQuantity * customerUnitPrice;
 
     const discountCustomerPrice =
       applyDiscount({ ...item, CustomerPrice: totalCustomerPrice }) ?? 0;
@@ -149,22 +153,21 @@ const getDeliveryTime = (
   return moment(date * 1000).format(outputFormat);
 };
 
-
- const getCaseTotal = item => {
+const getCaseTotal = (item) => {
   if (item?.isWeightable && extractWeight(item?.weight) > 0) {
-    return formatMoney(extractWeight(item?.weight) * item?.CustomerUnitPrice)
+    return formatMoney(extractWeight(item?.weight) * item?.CustomerUnitPrice);
   }
 
-  return formatMoney(item?.primaryQuantity * item?.CustomerPrice)
-}
+  return formatMoney(item?.primaryQuantity * item?.CustomerPrice);
+};
 
- const getUnitTotal = item => {
+const getUnitTotal = (item) => {
   if (item?.isWeightable && extractWeight(item?.weight) > 0) {
-    return formatMoney(extractWeight(item?.weight) * item?.CustomerUnitPrice)
+    return formatMoney(extractWeight(item?.weight) * item?.CustomerUnitPrice);
   }
 
-  return formatMoney(item?.secondaryQuantity * item?.CustomerUnitPrice)
-}
+  return formatMoney(item?.secondaryQuantity * item?.CustomerUnitPrice);
+};
 
 async function generatePdf(order, outputPath) {
   const hasWeightableItems = order?.items?.some(
@@ -176,7 +179,7 @@ async function generatePdf(order, outputPath) {
   ${
     item.primaryQuantity > 0
       ? `
-    <div style="display: flex; flex-direction: row; color: #4a4a4a; font-family: Helvetica; padding: 6px 0;">
+    <div style="display: flex; flex-direction: row; color: #4a4a4a; font-family: Helvetica; font-size: 16px; padding: 6px 0;">
       <div style="width: 10%; text-align: center;">${
         parseInt(item.primaryQuantity) || 0
       }</div>
@@ -192,7 +195,9 @@ async function generatePdf(order, outputPath) {
       <div style="width: 15%; text-align: center;">${formatMoney(
         item.CustomerPrice
       )}</div>
-      <div style="width: 20%; text-align: center; font-weight: bold;">${getCaseTotal(item)}</div>
+      <div style="width: 20%; text-align: center; font-weight: bold;">${getCaseTotal(
+        item
+      )}</div>
     </div>
   `
       : ""
@@ -200,7 +205,7 @@ async function generatePdf(order, outputPath) {
   ${
     item.secondaryQuantity > 0 || extractWeight(item?.weight) > 0
       ? `
-    <div style="display: flex; flex-direction: row; color: #4a4a4a; font-family: Helvetica; padding: 6px 0;">
+    <div style="display: flex; flex-direction: row; color: #4a4a4a; font-family: Helvetica; font-size: 16px; padding: 6px 0;">
       <div style="width: 10%; text-align: center;">${
         parseInt(item.secondaryQuantity) || 0
       }</div>
@@ -216,7 +221,9 @@ async function generatePdf(order, outputPath) {
       <div style="width: 15%; text-align: center;">${formatMoney(
         item.CustomerUnitPrice
       )}</div>
-      <div style="width: 20%; text-align: center; font-weight: bold;">${getUnitTotal(item)}</div>
+      <div style="width: 20%; text-align: center; font-weight: bold;">${getUnitTotal(
+        item
+      )}</div>
     </div>
   `
       : ""
@@ -255,30 +262,32 @@ async function generatePdf(order, outputPath) {
 </div>
 
 <!-- Bill To & Invoice Section -->
-<div style="color: #4a4a4a; font-family: Helvetica; display: flex; margin-top: 1rem; justify-content: space-between; padding: 0.75rem 1rem;">
-  <div style="flex: 1; font-size: 14px; display: flex; flex-direction: column; gap: 0.3rem;"> 
-    <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">Bill To</p>
-    <p style="margin: 0;">${order?.name}</p>
-    <p style="margin: 0;">${order?.businessName}</p>
-    <p style="margin: 0;">${order?.confirmedDeliveryAddress}</p>
+<div style="color: #4a4a4a; font-family: Helvetica; display: flex; margin-top: 1rem; justify-content: space-between; padding: 0.75rem 1rem; font-size: 16px;">
+  <div style="flex: 1; font-size: 16px; display: flex; flex-direction: column; gap: 0.3rem;"> 
+    <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0; font-size: 16px;">Bill To</p>
+    <p style="margin: 0; font-size: 16px;">${order?.name}</p>
+    <p style="margin: 0; font-size: 16px;">${order?.businessName}</p>
+    <p style="margin: 0; font-size: 16px;">${
+      order?.confirmedDeliveryAddress
+    }</p>
   </div>
 
-  <div style="margin-left: 1.5rem; font-size: 14px; display: flex; flex-direction: row; gap: 1rem; align-items: center;"> 
+  <div style="margin-left: 1.5rem; font-size: 16px; display: flex; flex-direction: row; gap: 1rem; align-items: center;"> 
     <div style="text-align: right; display: flex; flex-direction: column; gap: 0.4rem;">
-      <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">Invoice #</p>
-      <p style="margin: 0;">Invoice Date:</p>
-      <p style="margin: 0;">Due Date:</p>
+      <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0; font-size: 16px;">Invoice #</p>
+      <p style="margin: 0; font-size: 16px;">Invoice Date:</p>
+      <p style="margin: 0; font-size: 16px;">Due Date:</p>
     </div>
     <div style="text-align: right; display: flex; flex-direction: column; gap: 0.4rem;">
-      <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">${
+      <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0; font-size: 16px;">${
         order?.orderId ?? "-"
       }</p>
-      <p style="margin: 0;">${
+      <p style="margin: 0; font-size: 16px;">${
         order?.deliveryDateTimestamp
           ? getDeliveryTime(order.deliveryDateTimestamp)
           : "NA"
       }</p>
-      <p style="margin: 0;">${
+      <p style="margin: 0; font-size: 16px;">${
         order?.dueDateTimestamp ? getDeliveryTime(order.dueDateTimestamp) : "NA"
       }</p>
     </div>
@@ -286,19 +295,19 @@ async function generatePdf(order, outputPath) {
 </div>
 
 <!-- Items Table -->
-<div style="padding-top: 1.5rem; overflow-x: auto; padding-left: 0.5rem;">
+<div style="padding-top: 1.5rem; overflow-x: auto; padding-left: 0.5rem; font-size: 16px;">
   <!-- Table Header -->
-  <div style="display: flex; flex-direction: row; font-weight: bold; font-family: Helvetica; color: #1a202c; margin-bottom: 0.5rem;  padding-bottom: 8px;">
-    <div style="width: 10%; text-align: center;">QTY</div>
-    <div style="width: 15%; text-align: center;">UOM</div>
-    <div style="width: 50%; text-align: left;">ITEM DESCRIPTION</div>
+  <div style="display: flex; flex-direction: row; font-weight: bold; font-family: Helvetica; color: #1a202c; margin-bottom: 0.5rem; padding-bottom: 8px; font-size: 16px;">
+    <div style="width: 10%; text-align: center; font-size: 16px;">QTY</div>
+    <div style="width: 15%; text-align: center; font-size: 16px;">UOM</div>
+    <div style="width: 50%; text-align: left; font-size: 16px;">ITEM DESCRIPTION</div>
     ${
       hasWeightableItems
-        ? '<div style="width: 15%; text-align: center;">WEIGHT</div>'
+        ? '<div style="width: 15%; text-align: center; font-size: 16px;">WEIGHT</div>'
         : ""
     }
-    <div style="width: 15%; text-align: center;">PRICE RATE</div>
-    <div style="width: 20%; text-align: center;">TOTAL</div>
+    <div style="width: 15%; text-align: center; font-size: 16px;">PRICE RATE</div>
+    <div style="width: 20%; text-align: center; font-size: 16px;">TOTAL</div>
   </div>
 
   ${itemRows}
@@ -306,13 +315,13 @@ async function generatePdf(order, outputPath) {
 
 <!-- Balance Due -->
 <div style="height: 2px; width: 100%; background-color: #e2e8f0; margin-top: 30px; margin-bottom: 4px;"></div>
-<div style="display: flex; justify-content: flex-end; margin-right: 1.25rem;">
+<div style="display: flex; justify-content: flex-end; margin-right: 1.25rem; font-size: 16px;">
   <div style="display: flex; flex-direction: row; justify-content: space-between; font-size: 16px; font-family: Helvetica; color: #2d3748; margin-top: 0.5rem;">
     <div style="text-align: left; padding-right: 2.5rem;">
-      <p style="font-weight: bold; font-family: Helvetica-Bold; color: #000;">BALANCE DUE</p>
+      <p style="font-weight: bold; font-family: Helvetica-Bold; color: #000; font-size: 16px;">BALANCE DUE</p>
     </div>
     <div style="text-align: left;">
-      <p style="font-weight: bold; font-family: Helvetica-Bold; color: #000;">${formatMoney(
+      <p style="font-weight: bold; font-family: Helvetica-Bold; color: #000; font-size: 16px;">${formatMoney(
         calculateTotalCost(order)
       )}</p>
     </div>
@@ -327,12 +336,12 @@ bottom: 0;
 left: 0;
 width: 100%;
 background: white;
-font-size: 14px;
+font-size: 16px;
 font-family: Arial, sans-serif;
 break-inside: avoid;
 ">
 <div style="max-width: 800px; margin: 0 auto;">
-  <div style="margin-bottom: 20px;">
+  <div style="margin-bottom: 20px; font-size: 16px;">
     By signing this document, I/We acknowledge the receipt of invoiced products.
     I/We agree to pay a finance charge of 1.5% per month on all past due accounts.
     Umami will charge a $30 processing fee on all returned checks for ACH Customers.
@@ -340,13 +349,13 @@ break-inside: avoid;
     items with the driver upon delivery.
   </div>
   <!-- Signature Section -->
-  <div style="display: flex; flex-direction: row; color: #4A4A4A; gap: 4rem;">
+  <div style="display: flex; flex-direction: row; color: #4A4A4A; gap: 4rem; font-size: 16px;">
     <div style="flex: 1;">
-      <p>Sign:</p>
+      <p style="font-size: 16px;">Sign:</p>
       <div style="width: 100%; height: 0.5px; background-color: #E2E8F0;"></div>
     </div>
     <div style="flex: 1;">
-      <p>Date:</p>
+      <p style="font-size: 16px;">Date:</p>
       <div style="width: 100%; height: 0.5px; background-color: #E2E8F0;"></div>
     </div>
   </div>
