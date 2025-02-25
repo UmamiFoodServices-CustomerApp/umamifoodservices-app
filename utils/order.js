@@ -98,7 +98,9 @@ const extractWeight = input => {
     if (!input) {
       return 0
     }
-    const match = input?.match(/^\d+(\.\d+)?/)
+    const inputStr = input.toString()
+
+    const match = inputStr?.match(/^\d+(\.\d+)?/)
     return match ? parseFloat(match[0]) : 0
   } catch (error) {
     console.log('🚀 ~ error:', error)
