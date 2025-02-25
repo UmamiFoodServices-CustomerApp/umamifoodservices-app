@@ -427,6 +427,102 @@ app.get(
   }
 );
 
+app.get(
+  "/confirmedOrderGeneratePdf",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (request, response) => {
+    try {
+      const orderId = request.query.orderId;
+      const email = request.query.email;
+      const invoiceUrl = request.query.invoiceUrl;
+
+      if (invoiceUrl) {
+        const formattedInvoiceUrl = invoiceUrl.replace(
+          "/o/invoices/",
+          "/o/invoices%2F"
+        );
+
+        const extension = getFileExtension(formattedInvoiceUrl);
+
+        let mailOptions = {
+          from: process.env.MAIL_FROM,
+          to: email,
+          subject: "Your Invoice",
+          text: "Please find your attached invoice.",
+          attachments: [
+            {
+              filename: `invoice.${extension}`,
+              path: formattedInvoiceUrl,
+            },
+          ],
+        };
+
+        await transporter.sendMail(mailOptions);
+        return response.status(200).json({ status: true });
+      }
+
+      const orderDocRef = db.collection("confirmed").doc(orderId);
+      const orderSnap = await orderDocRef.get();
+
+      const order = orderSnap?.data?.();
+
+
+      const outputPath = 'output_invoice.pdf'; 
+
+      await generatePdf(order, outputPath); 
+
+      const pdfData = fs.readFileSync(outputPath);
+
+
+        if (!email) {
+          response.setHeader("Content-Type", "application/pdf");
+          response.setHeader(
+            "Content-Disposition",
+            "inline; filename=invoice.pdf"
+          );
+          return response.send(pdfData);
+        }
+
+        let mailOptions = {
+          from: process.env.MAIL_FROM,
+          to: email,
+          subject: "Your Invoice",
+          text: "Please find your attached invoice.",
+          attachments: [
+            {
+              filename: "invoice.pdf",
+              content: pdfData,
+            },
+          ],
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error(error);
+            response.status(500).send({
+              errorMessage: "Email error; please try again;",
+            });
+          } else {
+            console.log("Email sent: " + info.response);
+            response.setHeader("Content-Type", "application/pdf");
+            response.setHeader(
+              "Content-Disposition",
+              "inline; filename=invoice.pdf"
+            );
+            response.send(pdfData);
+          }
+        });
+
+    } catch (error) {
+      console.error(error);
+      response.status(500).send({
+        errorMessage: "PDF error; please try again;",
+      });
+    }
+  }
+);
+
 app.post(
   "/create-stripe-customer",
   bodyParser.urlencoded({ extended: false }),
