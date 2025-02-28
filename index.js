@@ -886,11 +886,11 @@ app.post(
       // Send Email to Admin
       const adminMailOptions = {
         from: process.env.MAIL_FROM,
-        to: ["simran@tepia.co", "maricel@tepia.co"], // TODO : Change this to correct admin email once confirmation from client
+        to: "kennguyen.987@gmail.com",
         subject: "Welcome new user to Umami Food Services!",
         html: getCustomerSignupAdminWelcome({
           userEmail: email,
-          adminFullName: "Umami Admin Test", // TODO : Change this to correct admin name once confirmation from client
+          adminFullName: "Umami Admin",
           userFullName: name,
         }),
       };
