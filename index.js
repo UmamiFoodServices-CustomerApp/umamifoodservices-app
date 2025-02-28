@@ -422,11 +422,11 @@ app.get(
       console.error(error);
       response.status(500).send({
         errorMessage: "PDF error; please try again;",
+        error,
       });
     }
   }
 );
-
 
 app.post(
   "/create-stripe-customer",
