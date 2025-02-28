@@ -85,7 +85,7 @@ module.exports = (app, db) => {
           html: sendPaymentNotificationHtmlBody(
             customerName,
             amountPaid,
-            "gourav@yopmail.com"
+            "kennguyen.987@gmail.com"
           ),
         };
 
