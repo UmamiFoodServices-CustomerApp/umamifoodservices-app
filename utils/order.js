@@ -169,7 +169,7 @@ const getUnitTotal = (item) => {
 
 async function generatePdf(orders, outputPath) {
   const orderList = Array.isArray(orders) ? orders : [orders];
-  const ITEMS_PER_PAGE = 7;
+  const ITEMS_PER_PAGE = 11;
 
   let htmlContent = '';
 
@@ -201,19 +201,20 @@ async function generatePdf(orders, outputPath) {
       currentRowCount += rowsForItem
     }
 
-      const pageTotalCost = calculateTotalCost({ items: pageItems });
+      const pageTotalCost = calculateTotalCost({ items });
 
       const isFirstPageOfOrder = pageIndex === 0;
       const shouldBreakBefore = orderIndex > 0 && isFirstPageOfOrder;
 
       const hasWeightableItems = items.some(item => item.isWeightable && extractWeight(item.weight) > 0);
 
+
       const itemRows = pageItems
         .map(item => `
           ${
             item.primaryQuantity > 0
               ? `
-            <div style="display: flex; flex-direction: row; color: #4a4a4a; font-family: Helvetica; padding: 6px 0;">
+            <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 14px; font-family: Helvetica; padding: 6px 0;">
               <div style="width: 10%; text-align: center;">${parseInt(item.primaryQuantity) || 0}</div>
               <div style="width: 15%; text-align: center;">Case</div>
               <div style="width: 50%; text-align: left;">${getItemName(item)}</div>
@@ -231,7 +232,7 @@ async function generatePdf(orders, outputPath) {
           ${
             item.secondaryQuantity > 0 || extractWeight(item?.weight) > 0
               ? `
-            <div style="display: flex; flex-direction: row; color: #4a4a4a; font-family: Helvetica; padding: 6px 0;">
+            <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 14px; font-family: Helvetica; padding: 6px 0;">
               <div style="width: 10%; text-align: center;">${parseInt(item.secondaryQuantity) || 0}</div>
               <div style="width: 15%; text-align: center;">Unit</div>
               <div style="width: 50%; text-align: left;">${getItemName(item)}</div>
@@ -311,7 +312,9 @@ async function generatePdf(orders, outputPath) {
             ${itemRows}
           </div>
 
-          <!-- Balance Due -->
+          ${
+            pageIndex === totalPages - 1
+              ? `
           <div style="height: 2px; width: 100%; background-color: #e2e8f0; margin-top: 30px; margin-bottom: 4px;"></div>
           <div style="display: flex; justify-content: flex-end; margin-right: 1.25rem;">
             <div style="display: flex; flex-direction: row; justify-content: space-between; font-size: 16px; font-family: Helvetica; color: #2d3748; margin-top: 0.5rem;">
@@ -323,6 +326,9 @@ async function generatePdf(orders, outputPath) {
               </div>
             </div>
           </div>
+          `
+              : ''
+          }
 
           <!-- Bottom Sign Section -->
           <div style="position: fixed; bottom: 30px; left: 0; width: 100%; max-width: 750px; background: white; font-size: 14px; font-family: Arial, sans-serif; page-break-inside: avoid;">
