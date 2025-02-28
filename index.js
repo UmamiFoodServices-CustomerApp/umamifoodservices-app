@@ -5,20 +5,15 @@ require("dotenv").config();
 const { Client, Environment } = require("square");
 const crypto = require("crypto");
 const bodyParser = require("body-parser");
-const PDFDocument = require("pdfkit"); // Import the pdfkit library
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const cors = require("cors");
 const { getAdminInviteEmail } = require("./emails/adminInvite");
+const fs = require("fs");
+const { updateDoc } = require("firebase/firestore");
 
 const firebaseAdmin = require("firebase-admin");
 
-const {
-  getItemQuantity,
-  getItemName,
-  formatMoney,
-  getItemFinalAmount,
-  getItemRate,
-} = require("./utils/order");
+const { generatePdf } = require("./utils/order");
 
 const serviceAccount = {
   type: "service_account",
@@ -343,6 +338,7 @@ app.get(
       const orderId = request.query.orderId;
       const email = request.query.email;
       const invoiceUrl = request.query.invoiceUrl;
+      const isActiveOrder = request.query.orderStatus === "active";
 
       if (invoiceUrl) {
         const formattedInvoiceUrl = invoiceUrl.replace(
@@ -369,166 +365,64 @@ app.get(
         return response.status(200).json({ status: true });
       }
 
-      const orderDocRef = db.collection("completed").doc(orderId);
+      const orderDocRef = db
+        .collection(isActiveOrder ? "confirmed" : "completed")
+        .doc(orderId);
       const orderSnap = await orderDocRef.get();
 
       const order = orderSnap?.data?.();
-      const items = order.items;
 
-      const todayDate = () => {
-        const currentDate = new Date();
-        const day = String(currentDate.getDate()).padStart(2, "0");
-        const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-        const year = currentDate.getFullYear();
+      const outputPath = "output_invoice.pdf";
 
-        return `${day}/${month}/${year}`;
+      await generatePdf(order, outputPath);
+
+      const pdfData = fs.readFileSync(outputPath);
+
+      await orderDocRef.update({ generateNewInvoice: false });
+
+      if (!email) {
+        response.setHeader("Content-Type", "application/pdf");
+        response.setHeader(
+          "Content-Disposition",
+          "inline; filename=invoice.pdf"
+        );
+        return response.send(pdfData);
+      }
+
+      let mailOptions = {
+        from: process.env.MAIL_FROM,
+        to: email,
+        subject: "Your Invoice",
+        text: "Please find your attached invoice.",
+        attachments: [
+          {
+            filename: "invoice.pdf",
+            content: pdfData,
+          },
+        ],
       };
 
-      let fontNormal = "Helvetica";
-      let fontBold = "Helvetica-Bold";
-
-      // Create a new PDF document
-      const doc = new PDFDocument();
-      const buffers = [];
-      doc.on("data", buffers.push.bind(buffers));
-      doc.on("end", async () => {
-        const pdfData = Buffer.concat(buffers);
-
-        if (!email) {
-          // Set response headers for PDF
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error(error);
+          response.status(500).send({
+            errorMessage: "Email error; please try again;",
+          });
+        } else {
+          console.log("Email sent: " + info.response);
           response.setHeader("Content-Type", "application/pdf");
           response.setHeader(
             "Content-Disposition",
             "inline; filename=invoice.pdf"
           );
-          return response.send(pdfData);
+          response.send(pdfData);
         }
-
-        let mailOptions = {
-          from: process.env.MAIL_FROM,
-          to: email,
-          subject: "Your Invoice",
-          text: "Please find your attached invoice.",
-          attachments: [
-            {
-              filename: "invoice.pdf",
-              content: pdfData,
-            },
-          ],
-        };
-
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.error(error);
-            response.status(500).send({
-              errorMessage: "Email error; please try again;",
-            });
-          } else {
-            console.log("Email sent: " + info.response);
-            response.setHeader("Content-Type", "application/pdf");
-            response.setHeader(
-              "Content-Disposition",
-              "inline; filename=invoice.pdf"
-            );
-            response.send(pdfData);
-          }
-        });
       });
-      doc
-        .image(imagePath, { scale: 0.2 })
-        .fontSize(18)
-        .font(fontBold)
-        .text("Umami Food Services", 200, 100)
-        .fontSize(12)
-        .font(fontNormal)
-        .text("14841 Moran St", 200, 124)
-        .text("Westminster, CA 92683 US", 200, 140)
-        .text("sales@umamiservices.com", 200, 156);
-
-      doc
-        .fillColor("#FF8C00")
-        .fontSize(26)
-        .font(fontBold)
-        .text("INVOICE", 60, 180, {});
-
-      doc.moveDown(0.4);
-
-      doc
-        .fillColor("#000000")
-        .font(fontBold)
-        .fontSize(18)
-        .text("Bill To", { align: "start" })
-        .fontSize(12)
-        .font(fontNormal)
-        .text(order.name)
-        .text(order.businessName)
-        .text(order.confirmedDeliveryAddress);
-
-      doc
-        .fillColor("#000000")
-        .font(fontBold)
-        .fontSize(14)
-        .text("INVOICE #", 400, 225, { continued: true, paragraphGap: 10 })
-        .fontSize(12)
-        .font(fontNormal)
-        .text(todayDate(), 440);
-
-      doc.moveDown(4.4);
-
-      doc.stroke();
-      doc.lineWidth(25).fillColor("red");
-
-      doc.lineWidth(0.5);
-      doc.strokeColor("#fd8c02");
-      doc.moveTo(50, 300).lineTo(570, 300).stroke();
-
-      doc.rect(50, 310, 520, 24).fill("#ffe8cc").stroke("#fd8c02");
-      doc
-        .fillColor("#fd8c02")
-        .font(fontBold)
-        .text("QTY", 60, 317, { width: 90 });
-      doc.font(fontBold).text("ITEMS", 110, 317, { width: 300 });
-      doc.font(fontBold).text("RATE", 420, 317, { width: 90 });
-      doc.font(fontBold).text("AMOUNT", 500, 317, { width: 100 });
-
-      let itemNo = 1;
-      items.forEach((item) => {
-        let y = 330 + itemNo * 20;
-        doc
-          .fillColor("#000")
-          .font(fontNormal)
-          .text(getItemQuantity(item), 60, y, { width: 90 });
-        doc.font(fontNormal).text(getItemName(item), 110, y, { width: 300 });
-        doc.font(fontNormal).text(getItemRate(item), 420, y, { width: 90 });
-        doc
-          .font(fontNormal)
-          .text(formatMoney(getItemFinalAmount(item)), 500, y, { width: 100 });
-        itemNo++;
-      });
-
-      itemNo++;
-
-      doc.dash(5, { space: 2 });
-      doc.lineWidth(0.5);
-      doc.strokeColor("#333333");
-      doc
-        .moveTo(50, 310 + itemNo * 20)
-        .lineTo(570, 310 + itemNo * 20)
-        .stroke();
-      doc.undash();
-
-      doc.font(fontBold).text("TOTAL", 400, 330 + itemNo * 20);
-      doc
-        .font(fontBold)
-        .text(formatMoney(order.totalCost), 500, 330 + itemNo * 20, {
-          width: 100,
-        });
-
-      doc.end();
     } catch (error) {
       console.error(error);
       response.status(500).send({
         errorMessage: "PDF error; please try again;",
+        error,
       });
     }
   }
@@ -992,7 +886,7 @@ app.post(
       // Send Email to Admin
       const adminMailOptions = {
         from: process.env.MAIL_FROM,
-        to: "gouravadmin@yopmail.com", // TODO : Change this to correct admin email once confirmation from client
+        to: ["simran@tepia.co", "maricel@tepia.co"], // TODO : Change this to correct admin email once confirmation from client
         subject: "Welcome new user to Umami Food Services!",
         html: getCustomerSignupAdminWelcome({
           userEmail: email,
