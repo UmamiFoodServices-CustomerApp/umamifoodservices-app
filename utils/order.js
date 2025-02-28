@@ -142,6 +142,21 @@ const getCaseTotal = (item) => {
   return formatMoney(item?.primaryQuantity * finalCustomerPrice);
 };
 
+ const countTotalItems = items => {
+  let totalCount = 0
+
+  items.forEach(item => {
+    if (parseInt(item?.primaryQuantity) > 0) {
+      totalCount += 1
+    }
+    if (parseInt(item?.secondaryQuantity) > 0) {
+      totalCount += 1
+    }
+  })
+
+  return totalCount
+}
+
 
 const getUnitTotal = (item) => {
   const finalUnitPrice = parseFloat(item?.CustomerUnitPrice)
@@ -154,18 +169,37 @@ const getUnitTotal = (item) => {
 
 async function generatePdf(orders, outputPath) {
   const orderList = Array.isArray(orders) ? orders : [orders];
-  const ITEMS_PER_PAGE = 4;
+  const ITEMS_PER_PAGE = 7;
 
   let htmlContent = '';
 
   orderList.forEach((order, orderIndex) => {
     const items = order.items || [];
-    const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+    const totalRows = countTotalItems(items)
+
+    const totalPages = Math.ceil(totalRows / ITEMS_PER_PAGE);
 
     for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
       const startIdx = pageIndex * ITEMS_PER_PAGE;
       const endIdx = startIdx + ITEMS_PER_PAGE;
-      const pageItems = items.slice(startIdx, endIdx);
+      let currentRowCount = 0
+    const pageItems = []
+
+    for (const item of items) {
+      const hasPrimary = parseInt(item?.primaryQuantity) > 0
+      const hasSecondary = parseInt(item?.secondaryQuantity) > 0
+      const rowsForItem = (hasPrimary ? 1 : 0) + (hasSecondary ? 1 : 0)
+
+      if (currentRowCount + rowsForItem > endIdx) {
+        break
+      }
+
+      if (currentRowCount + rowsForItem > startIdx) {
+        pageItems.push(item)
+      }
+
+      currentRowCount += rowsForItem
+    }
 
       const pageTotalCost = calculateTotalCost({ items: pageItems });
 
