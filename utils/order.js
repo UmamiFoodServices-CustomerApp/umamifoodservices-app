@@ -99,7 +99,7 @@ const calculateTotalCost = (order) => {
     const customerPrice = parseFloat(item?.CustomerPrice || 0);
     const secondaryQuantity = Number(item?.secondaryQuantity || 0);
     const customerUnitPrice = parseFloat(item?.CustomerUnitPrice || 0);
-    const isWeightable = item?.isWeightable && extractWeight(item?.weight) > 0;
+    const isWeightable = extractWeight(item?.weight) > 0;
     const weightableCost = isWeightable
       ? extractWeight(item?.weight) * customerUnitPrice
       : 0;
@@ -133,14 +133,22 @@ const getDeliveryTime = (date = moment.unix(), inputFormat = undefined, outputFo
   return moment(date * 1000).format(outputFormat);
 };
 
-const getCaseTotal = (item) => {
-  const finalCustomerPrice = parseFloat(item?.CustomerPrice)
-  const finalUnitPrice = parseFloat(item?.CustomerUnitPrice)
-  if (item?.isWeightable && extractWeight(item?.weight) > 0) {
-    return formatMoney(extractWeight(item?.weight) * finalUnitPrice);
+ const getCaseTotal = item => {
+  const secondaryQuantity = parseInt(item?.secondaryQuantity || 0)
+  if (extractWeight(item?.weight) > 0 && secondaryQuantity === 0) {
+    const finalPrimaryQuantity = item?.primaryQuantity || 0
+    const finalCustomerPrice = parseFloat(item?.CustomerPrice) || 0
+    return formatMoney(
+      extractWeight(item?.weight) * item?.CustomerUnitPrice +
+        finalPrimaryQuantity * finalCustomerPrice
+    )
   }
-  return formatMoney(item?.primaryQuantity * finalCustomerPrice);
-};
+
+  const finalPrimaryQuantity = item?.primaryQuantity || 0
+  const finalCustomerPrice = parseFloat(item?.CustomerPrice) || 0
+
+  return formatMoney(finalPrimaryQuantity * finalCustomerPrice)
+}
 
  const countTotalItems = items => {
   let totalCount = 0
@@ -161,7 +169,7 @@ const getCaseTotal = (item) => {
 const getUnitTotal = (item) => {
   const finalUnitPrice = parseFloat(item?.CustomerUnitPrice)
 
-  if (item?.isWeightable && extractWeight(item?.weight) > 0) {
+  if (extractWeight(item?.weight) > 0) {
     return formatMoney(extractWeight(item?.weight) * finalUnitPrice);
   }
   return formatMoney(item?.secondaryQuantity * finalUnitPrice);
@@ -206,7 +214,7 @@ async function generatePdf(orders, outputPath) {
       const isFirstPageOfOrder = pageIndex === 0;
       const shouldBreakBefore = orderIndex > 0 && isFirstPageOfOrder;
 
-      const hasWeightableItems = items.some(item => item.isWeightable && extractWeight(item.weight) > 0);
+      const hasWeightableItems = items.some(item =>  extractWeight(item.weight) > 0);
 
 
       const itemRows = pageItems
@@ -220,7 +228,7 @@ async function generatePdf(orders, outputPath) {
               <div style="width: 70%; text-align: left;">${getItemName(item)}</div>
               ${
                 hasWeightableItems
-                  ? `<div style="width: 15%; text-align: center;">${extractWeight(item.weight) || "-"}</div>`
+                  ? `<div style="width: 15%; text-align: center;">${parseInt(item?.secondaryQuantity || 0) === 0 && extractWeight(item?.weight) > 0 ?  extractWeight(item.weight) : "-"}</div>`
                   : ""
               }
               <div style="width: 15%; text-align: center;">${formatMoney(item.CustomerPrice)}</div>
@@ -230,7 +238,7 @@ async function generatePdf(orders, outputPath) {
               : ""
           }
           ${
-            item.secondaryQuantity > 0 || extractWeight(item?.weight) > 0
+            item.secondaryQuantity > 0 
               ? `
             <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 11px; font-family: Helvetica; padding: 6px 0;">
               <div style="width: 10%; text-align: center;">${parseInt(item.secondaryQuantity) || 0}</div>
