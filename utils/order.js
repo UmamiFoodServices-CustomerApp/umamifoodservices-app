@@ -169,7 +169,7 @@ const getUnitTotal = (item) => {
 
 async function generatePdf(orders, outputPath) {
   const orderList = Array.isArray(orders) ? orders : [orders];
-  const ITEMS_PER_PAGE = 11;
+  const ITEMS_PER_PAGE = 20;
 
   let htmlContent = '';
 
@@ -214,10 +214,10 @@ async function generatePdf(orders, outputPath) {
           ${
             item.primaryQuantity > 0
               ? `
-            <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 14px; font-family: Helvetica; padding: 6px 0;">
+            <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 11px; font-family: Helvetica; padding: 6px 0;">
               <div style="width: 10%; text-align: center;">${parseInt(item.primaryQuantity) || 0}</div>
               <div style="width: 15%; text-align: center;">Case</div>
-              <div style="width: 50%; text-align: left;">${getItemName(item)}</div>
+              <div style="width: 70%; text-align: left;">${getItemName(item)}</div>
               ${
                 hasWeightableItems
                   ? `<div style="width: 15%; text-align: center;">${extractWeight(item.weight) || "-"}</div>`
@@ -232,10 +232,10 @@ async function generatePdf(orders, outputPath) {
           ${
             item.secondaryQuantity > 0 || extractWeight(item?.weight) > 0
               ? `
-            <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 14px; font-family: Helvetica; padding: 6px 0;">
+            <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 11px; font-family: Helvetica; padding: 6px 0;">
               <div style="width: 10%; text-align: center;">${parseInt(item.secondaryQuantity) || 0}</div>
               <div style="width: 15%; text-align: center;">Unit</div>
-              <div style="width: 50%; text-align: left;">${getItemName(item)}</div>
+              <div style="width: 70%; text-align: left;">${getItemName(item)}</div>
               ${
                 hasWeightableItems
                   ? `<div style="width: 15%; text-align: center;">${extractWeight(item.weight) || "-"}</div>`
@@ -255,7 +255,8 @@ async function generatePdf(orders, outputPath) {
 
    
       htmlContent += `
-        <div id="umani-app-invoice-form-${order.id}-page-${pageIndex + 1}" style="font-family: Helvetica, Arial, sans-serif; margin-top: 12px; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; page-break-before: ${shouldBreakBefore ? 'always' : 'auto'}; padding: 1rem; height: 1000px;">
+        <div id="umani-app-invoice-form-${order.id}-page-${pageIndex + 1}" style="font-family: Helvetica, Arial, sans-serif; margin-top: 12px; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; page-break-before: ${shouldBreakBefore ? 'always' : 'auto'};  height: 1000px;">
+        <div style="height: 850px;">
         <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-radius: 8px; padding: 0.5rem 1rem; ">
         <img src="data:image/png;base64,${imageBase64}" width="90" height="90" style="display: block;" />
             <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 14px; text-align: center;">
@@ -275,7 +276,7 @@ async function generatePdf(orders, outputPath) {
               <p style="margin: 0;">${order?.businessName || order?.invoice?.customer?.businessName}</p>
               <p style="margin: 0;">${order?.confirmedDeliveryAddress || order?.invoice?.customer?.confirmedDeliveryAddress}</p>
             </div>
-            <div style="margin-left: 1.5rem; font-size: 14px; display: flex; flex-direction: row; gap: 1rem; align-items: center;"> 
+            <div style="margin-left: 1.5rem; font-size: 11px; display: flex; flex-direction: row; gap: 1rem; align-items: center;"> 
               <div style="text-align: right; display: flex; flex-direction: column; gap: 0.4rem;">
                 <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">Invoice #</p>
                 <p style="margin: 0;">Invoice Date:</p>
@@ -294,12 +295,12 @@ async function generatePdf(orders, outputPath) {
           </div>
 
           <!-- Items Table -->
-          <div style="padding-top: 1.5rem; overflow-x: auto; padding-left: 0.5rem;">
+          <div style="padding-top: 1rem; overflow-x: auto; ">
             <!-- Table Header -->
-            <div style="display: flex; flex-direction: row; font-weight: bold; font-family: Helvetica; color: #1a202c; margin-bottom: 0.5rem; padding-bottom: 8px;">
+            <div style="display: flex; flex-direction: row; font-weight: bold; font-size: 11px; font-family: Helvetica; color: #1a202c;  padding-bottom: 8px;">
               <div style="width: 10%; text-align: center;">QTY</div>
               <div style="width: 15%; text-align: center;">UOM</div>
-              <div style="width: 50%; text-align: left;">ITEM DESCRIPTION</div>
+              <div style="width: 70%; text-align: left;">ITEM DESCRIPTION</div>
               ${
                 hasWeightableItems
                   ? '<div style="width: 15%; text-align: center;">WEIGHT</div>'
@@ -315,9 +316,9 @@ async function generatePdf(orders, outputPath) {
           ${
             pageIndex === totalPages - 1
               ? `
-          <div style="height: 2px; width: 100%; background-color: #e2e8f0; margin-top: 30px; margin-bottom: 4px;"></div>
+          <div style="height: 2px; width: 100%; background-color: #e2e8f0; margin-top: 10px; margin-bottom: 4px;"></div>
           <div style="display: flex; justify-content: flex-end; margin-right: 1.25rem;">
-            <div style="display: flex; flex-direction: row; justify-content: space-between; font-size: 16px; font-family: Helvetica; color: #2d3748; margin-top: 0.5rem;">
+            <div style="display: flex; flex-direction: row; justify-content: space-between; font-size: 14px; font-family: Helvetica; color: #2d3748; ">
               <div style="text-align: left; padding-right: 2.5rem;">
                 <p style="font-weight: bold; font-family: Helvetica-Bold; color: #000;">BALANCE DUE</p>
               </div>
@@ -329,15 +330,16 @@ async function generatePdf(orders, outputPath) {
           `
               : ''
           }
-
+</div>
+<div style="height: 150px; ">
           <!-- Bottom Sign Section -->
-          <div style="position: fixed; bottom: 30px; left: 0; width: 100%; max-width: 750px; background: white; font-size: 14px; font-family: Arial, sans-serif; page-break-inside: avoid;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 1rem;">
+          <div style="width: 100%; max-width: 750px; background: white; font-size: 14px; font-family: Arial, sans-serif; page-break-inside: avoid;">
+            <div style="max-width: 650px; margin: 0 auto; padding: 1rem;">
               By signing this document I/We acknowledge the receipt of invoiced products. I/We agree to pay
               a finance charge of 1.5% per month on all past due accounts. Umami will charge a $30
               processing fee on all returned checks for ACH Customers. Claims must be made upon the time
               of delivery. Please weigh and inspect all items with the driver upon delivery.
-              <div style="display: flex; flex-direction: row; color: #4A4A4A; gap: 4rem; margin-top: 2rem;">
+              <div style="display: flex; flex-direction: row; color: #4A4A4A; gap: 4rem; margin-top: 1rem;">
                 <div style="flex: 1;">
                   <p>Sign:</p>
                   <div style="width: 100%; height: 0.5px; background-color: #E2E8F0;"></div>
@@ -348,7 +350,11 @@ async function generatePdf(orders, outputPath) {
                 </div>
               </div>
             </div>
-          </div>
+            ${totalPages > 1 ? `<p style="text-align: center; font-size: 12px; font-weight: bold; margin-top: 1rem; color: #000; font-family: Helvetica-Bold, Arial, sans-serif;">
+            Page ${pageIndex + 1} of ${totalPages}
+          </p>` : ''}
+        </div>
+        </div>
         </div>
       `;
     }
