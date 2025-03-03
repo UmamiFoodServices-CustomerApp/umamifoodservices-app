@@ -269,7 +269,7 @@ async function generatePdf(orders, outputPath) {
           </div>
 
           <!-- Bill To & Invoice Section -->
-          <div style="color: #4a4a4a; font-family: Helvetica; display: flex; margin-top: 1rem; justify-content: space-between; padding: 0.75rem 1rem;">
+          <div style="color: #4a4a4a; font-family: Helvetica; display: flex; justify-content: space-between; padding: 0.50rem 1rem;">
             <div style="flex: 1; font-size: 14px; display: flex; flex-direction: column; gap: 0.3rem;"> 
               <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">Bill To</p>
               <p style="margin: 0;">${order?.name || order?.invoice?.customer?.name}</p>
