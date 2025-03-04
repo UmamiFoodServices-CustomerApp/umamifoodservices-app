@@ -95,9 +95,9 @@ const extractWeight = (input) => {
 
 const calculateTotalCost = (order) => {
   let cost = order.items.reduce((total, item) => {
-    const primaryQuantity = Number(item?.primaryQuantity || 0);
+    const primaryQuantity = parseFloat(item?.primaryQuantity || 0);
     const customerPrice = parseFloat(item?.CustomerPrice || 0);
-    const secondaryQuantity = Number(item?.secondaryQuantity || 0);
+    const secondaryQuantity = parseFloat(item?.secondaryQuantity || 0);
     const customerUnitPrice = parseFloat(item?.CustomerUnitPrice || 0);
     const isWeightable = extractWeight(item?.weight) > 0;
     const weightableCost = isWeightable
@@ -134,7 +134,7 @@ const getDeliveryTime = (date = moment.unix(), inputFormat = undefined, outputFo
 };
 
  const getCaseTotal = item => {
-  const secondaryQuantity = parseInt(item?.secondaryQuantity || 0)
+  const secondaryQuantity = parseFloat(item?.secondaryQuantity || 0)
   if (extractWeight(item?.weight) > 0 && secondaryQuantity === 0) {
     const finalPrimaryQuantity = item?.primaryQuantity || 0
     const finalCustomerPrice = parseFloat(item?.CustomerPrice) || 0
@@ -154,10 +154,10 @@ const getDeliveryTime = (date = moment.unix(), inputFormat = undefined, outputFo
   let totalCount = 0
 
   items.forEach(item => {
-    if (parseInt(item?.primaryQuantity) > 0) {
+    if (parseFloat(item?.primaryQuantity) > 0) {
       totalCount += 1
     }
-    if (parseInt(item?.secondaryQuantity) > 0) {
+    if (parseFloat(item?.secondaryQuantity) > 0) {
       totalCount += 1
     }
   })
@@ -194,8 +194,8 @@ async function generatePdf(orders, outputPath) {
     const pageItems = []
 
     for (const item of items) {
-      const hasPrimary = parseInt(item?.primaryQuantity) > 0
-      const hasSecondary = parseInt(item?.secondaryQuantity) > 0
+      const hasPrimary = parseFloat(item?.primaryQuantity) > 0
+      const hasSecondary = parseFloat(item?.secondaryQuantity) > 0
       const rowsForItem = (hasPrimary ? 1 : 0) + (hasSecondary ? 1 : 0)
 
       if (currentRowCount + rowsForItem > endIdx) {
@@ -223,12 +223,12 @@ async function generatePdf(orders, outputPath) {
             item.primaryQuantity > 0
               ? `
             <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 11px; font-family: Helvetica; padding: 6px 0;">
-              <div style="width: 10%; text-align: center;">${parseInt(item.primaryQuantity) || 0}</div>
+              <div style="width: 10%; text-align: center;">${parseFloat(item.primaryQuantity) || 0}</div>
               <div style="width: 15%; text-align: center;">Case</div>
               <div style="width: 70%; text-align: left;">${getItemName(item)}</div>
               ${
                 hasWeightableItems
-                  ? `<div style="width: 15%; text-align: center;">${parseInt(item?.secondaryQuantity || 0) === 0 && extractWeight(item?.weight) > 0 ?  extractWeight(item.weight) : "-"}</div>`
+                  ? `<div style="width: 15%; text-align: center;">${parseFloat(item?.secondaryQuantity || 0) === 0 && extractWeight(item?.weight) > 0 ?  extractWeight(item.weight) : "-"}</div>`
                   : ""
               }
               <div style="width: 15%; text-align: center;">${formatMoney(item.CustomerPrice)}</div>
@@ -241,7 +241,7 @@ async function generatePdf(orders, outputPath) {
             item.secondaryQuantity > 0 
               ? `
             <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 11px; font-family: Helvetica; padding: 6px 0;">
-              <div style="width: 10%; text-align: center;">${parseInt(item.secondaryQuantity) || 0}</div>
+              <div style="width: 10%; text-align: center;">${parseFloat(item.secondaryQuantity) || 0}</div>
               <div style="width: 15%; text-align: center;">Unit</div>
               <div style="width: 70%; text-align: left;">${getItemName(item)}</div>
               ${
