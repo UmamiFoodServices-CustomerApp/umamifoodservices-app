@@ -203,7 +203,7 @@ async function generatePdf(orders, outputPath) {
         a finance charge of 1.5% per month on all past due accounts. Umami will charge a $30
         processing fee on all returned checks for ACH Customers. Claims must be made upon the time
         of delivery. Please weigh and inspect all items with the driver upon delivery.
-        <div style="display: flex; flex-direction: row; color: #4A4A4A; gap: 4rem; margin-top: 1rem;">
+        <div style="display: flex; flex-direction: row; color: #4A4A4A; gap: 4rem; margin-top: 0.4rem;">
           <div style="flex: 1;">
             <p>Sign:</p>
             <div style="width: 100%; height: 0.5px; background-color: #E2E8F0;"></div>
@@ -296,10 +296,10 @@ async function generatePdf(orders, outputPath) {
     return `
       <div id="umani-app-invoice-form-${order.id}-page-${
       pageIndex + 1
-    }" style="font-family: Helvetica, Arial, sans-serif; margin-top: 12px; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; page-break-before: ${
+    }" style="font-family: Helvetica, Arial, sans-serif; margin-top: 15px; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; page-break-before: ${
       shouldBreakBefore ? "always" : "auto"
     };  height: 1000px;">
-        <div style="height: 850px;">
+        <div style="height: 830px;">
           <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-radius: 8px; padding: 0.5rem 1rem; ">
             <img src="data:image/png;base64,${imageBase64}" width="90" height="90" style="display: block;" />
             ${companyInfoTemplate}
@@ -388,7 +388,7 @@ async function generatePdf(orders, outputPath) {
           ${signatureSection}
           ${
             totalPages > 1
-              ? `<p style="text-align: center; font-size: 12px; font-weight: bold; margin-top: 1rem; color: #000; font-family: Helvetica-Bold, Arial, sans-serif;">
+              ? `<p style="text-align: center; font-size: 12px; font-weight: bold; margin-top: 0.2rem; color: #000; font-family: Helvetica-Bold, Arial, sans-serif;">
             Page ${pageIndex + 1} of ${totalPages}
           </p>`
               : ""
@@ -490,13 +490,13 @@ async function generatePdf(orders, outputPath) {
 
   const options = {
     path: outputPath,
-    format: "A4",
-    printBackground: true,
+    format: 'Letter', 
+    printBackground: true, 
     margin: {
-      top: "10mm",
-      right: "5mm",
-      bottom: "10mm",
-      left: "5mm",
+      top: "0.1in", 
+      right: "0.1in",
+      bottom: "0.1in",
+      left: "0.1in",
     },
     preferCSSPageSize: true,
   };
