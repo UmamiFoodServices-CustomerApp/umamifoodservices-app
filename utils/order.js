@@ -490,13 +490,13 @@ async function generatePdf(orders, outputPath) {
 
   const options = {
     path: outputPath,
-    format: "A4",
-    printBackground: true,
+    format: 'Letter', 
+    printBackground: true, 
     margin: {
-      top: "10mm",
-      right: "5mm",
-      bottom: "10mm",
-      left: "5mm",
+      top: "0.1in", 
+      right: "0.2in",
+      bottom: "0.1in",
+      left: "0.2in",
     },
     preferCSSPageSize: true,
   };
