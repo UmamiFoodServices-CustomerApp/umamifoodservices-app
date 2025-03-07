@@ -1,5 +1,5 @@
 const moment = require("moment");
-const { default: puppeteer } = require("puppeteer");
+const { browserPool } = require("./browserPool");
 const fs = require("fs");
 const company = require("../service/vars");
 
@@ -182,13 +182,17 @@ const getUnitTotal = (item) => {
 };
 
 async function generatePdf(orders, outputPath) {
-  const orderList = Array.isArray(orders) ? orders : [orders];
-  const ITEMS_PER_PAGE = 20;
+  let browser = null;
+  let page = null;
 
-  const imagePath = "./images/Logo.png";
-  const imageBase64 = fs.readFileSync(imagePath, { encoding: "base64" });
+  try {
+    const orderList = Array.isArray(orders) ? orders : [orders];
+    const ITEMS_PER_PAGE = 20;
 
-  const companyInfoTemplate = `
+    const imagePath = "./images/Logo.png";
+    const imageBase64 = fs.readFileSync(imagePath, { encoding: "base64" });
+
+    const companyInfoTemplate = `
     <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 14px; text-align: center;">
       <p style="font-weight: bold; font-family: Helvetica-Bold; font-size: 28px; letter-spacing: 0.05em; margin: 0;">${company.name}</p>
       <p style="font-size: 14px; font-family: Helvetica; margin: 2px 0;">${company.address}, ${company.city}, ${company.state} ${company.zip}, ${company.country}</p>
@@ -196,7 +200,7 @@ async function generatePdf(orders, outputPath) {
       <p style="font-size: 14px; font-family: Helvetica; margin: 2px 0;">Website: ${company.website}</p>
     </div>`;
 
-  const signatureSection = `
+    const signatureSection = `
     <div style="width: 100%; max-width: 750px; background: white; font-size: 14px; font-family: Arial, sans-serif; page-break-inside: avoid;">
       <div style="max-width: 650px; margin: 0 auto; padding: 1rem;">
         By signing this document I/We acknowledge the receipt of invoiced products. I/We agree to pay
@@ -216,27 +220,27 @@ async function generatePdf(orders, outputPath) {
       </div>
     </div>`;
 
-  function generatePageHTML(
-    order,
-    pageItems,
-    pageIndex,
-    totalPages,
-    shouldBreakBefore,
-    hasWeightableItems
-  ) {
-    const isLastPage = pageIndex === totalPages - 1;
-    const pageTotalCost = calculateTotalCost({ items: order.items });
+    function generatePageHTML(
+      order,
+      pageItems,
+      pageIndex,
+      totalPages,
+      shouldBreakBefore,
+      hasWeightableItems
+    ) {
+      const isLastPage = pageIndex === totalPages - 1;
+      const pageTotalCost = calculateTotalCost({ items: order.items });
 
-    const itemRows = pageItems
-      .map((item) => {
-        const hasPrimary = parseFloat(item?.primaryQuantity) > 0;
-        const hasSecondary = parseFloat(item?.secondaryQuantity) > 0;
-        const hasWeight = extractWeight(item?.weight) > 0;
+      const itemRows = pageItems
+        .map((item) => {
+          const hasPrimary = parseFloat(item?.primaryQuantity) > 0;
+          const hasSecondary = parseFloat(item?.secondaryQuantity) > 0;
+          const hasWeight = extractWeight(item?.weight) > 0;
 
-        let rowHTML = "";
+          let rowHTML = "";
 
-        if (hasPrimary) {
-          rowHTML += `
+          if (hasPrimary) {
+            rowHTML += `
           <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 11px; font-family: Helvetica; padding: 6px 0;">
             <div style="width: 10%; text-align: center;">${
               parseFloat(item.primaryQuantity) || 0
@@ -261,10 +265,10 @@ async function generatePdf(orders, outputPath) {
               item
             )}</div>
           </div>`;
-        }
+          }
 
-        if (hasSecondary) {
-          rowHTML += `
+          if (hasSecondary) {
+            rowHTML += `
           <div style="display: flex; flex-direction: row; color: #4a4a4a; font-size: 11px; font-family: Helvetica; padding: 6px 0;">
             <div style="width: 10%; text-align: center;">${
               parseFloat(item.secondaryQuantity) || 0
@@ -287,18 +291,18 @@ async function generatePdf(orders, outputPath) {
               item
             )}</div>
           </div>`;
-        }
+          }
 
-        return rowHTML;
-      })
-      .join("");
+          return rowHTML;
+        })
+        .join("");
 
-    return `
+      return `
       <div id="umani-app-invoice-form-${order.id}-page-${
-      pageIndex + 1
-    }" style="font-family: Helvetica, Arial, sans-serif; margin-top: 15px; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; page-break-before: ${
-      shouldBreakBefore ? "always" : "auto"
-    };  height: 1000px;">
+        pageIndex + 1
+      }" style="font-family: Helvetica, Arial, sans-serif; margin-top: 15px; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; page-break-before: ${
+        shouldBreakBefore ? "always" : "auto"
+      };  height: 1000px;">
         <div style="height: 830px;">
           <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; border-radius: 8px; padding: 0.5rem 1rem; ">
             <img src="data:image/png;base64,${imageBase64}" width="90" height="90" style="display: block;" />
@@ -395,116 +399,117 @@ async function generatePdf(orders, outputPath) {
           }
         </div>
       </div>`;
-  }
+    }
 
-  function splitItemsIntoPages(items, itemsPerPage) {
-    const pages = [];
-    let currentPage = [];
-    let currentRowCount = 0;
+    function splitItemsIntoPages(items, itemsPerPage) {
+      const pages = [];
+      let currentPage = [];
+      let currentRowCount = 0;
 
-    for (const item of items) {
-      const hasPrimary = parseFloat(item?.primaryQuantity) > 0;
-      const hasSecondary = parseFloat(item?.secondaryQuantity) > 0;
-      const rowsForItem = (hasPrimary ? 1 : 0) + (hasSecondary ? 1 : 0);
+      for (const item of items) {
+        const hasPrimary = parseFloat(item?.primaryQuantity) > 0;
+        const hasSecondary = parseFloat(item?.secondaryQuantity) > 0;
+        const rowsForItem = (hasPrimary ? 1 : 0) + (hasSecondary ? 1 : 0);
 
-      if (rowsForItem === 0) continue;
+        if (rowsForItem === 0) continue;
 
-      if (currentRowCount + rowsForItem > itemsPerPage) {
+        if (currentRowCount + rowsForItem > itemsPerPage) {
+          pages.push(currentPage);
+          currentPage = [item];
+          currentRowCount = rowsForItem;
+        } else {
+          currentPage.push(item);
+          currentRowCount += rowsForItem;
+        }
+      }
+
+      if (currentPage.length > 0) {
         pages.push(currentPage);
-        currentPage = [item];
-        currentRowCount = rowsForItem;
-      } else {
-        currentPage.push(item);
-        currentRowCount += rowsForItem;
+      }
+
+      return pages;
+    }
+
+    const htmlChunks = [];
+
+    for (let orderIndex = 0; orderIndex < orderList.length; orderIndex++) {
+      const order = orderList[orderIndex];
+      const items = order.items || [];
+
+      const totalRows = countTotalItems(items);
+      const totalPages = Math.ceil(totalRows / ITEMS_PER_PAGE);
+
+      const hasWeightableItems = items.some(
+        (item) => extractWeight(item.weight) > 0
+      );
+
+      const itemPages = splitItemsIntoPages(items, ITEMS_PER_PAGE);
+
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const isFirstPageOfOrder = pageIndex === 0;
+        const shouldBreakBefore = orderIndex > 0 && isFirstPageOfOrder;
+
+        const pageHTML = generatePageHTML(
+          order,
+          itemPages[pageIndex],
+          pageIndex,
+          totalPages,
+          shouldBreakBefore,
+          hasWeightableItems
+        );
+
+        htmlChunks.push(pageHTML);
       }
     }
 
-    if (currentPage.length > 0) {
-      pages.push(currentPage);
-    }
+    const htmlContent = htmlChunks.join("");
 
-    return pages;
+    browser = await browserPool.getBrowser();
+
+    page = await browser.newPage();
+
+    await page.setViewport({ width: 1200, height: 1553 });
+    await page.setRequestInterception(true);
+    page.on("request", (req) => {
+      const resourceType = req.resourceType();
+      if (resourceType === "document" || resourceType === "image") {
+        req.continue();
+      } else {
+        req.abort();
+      }
+    });
+
+    await page.setContent(htmlContent, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
+
+    const options = {
+      path: outputPath,
+      format: "Letter",
+      printBackground: true,
+      margin: {
+        top: "0.1in",
+        right: "0.1in",
+        bottom: "0.1in",
+        left: "0.1in",
+      },
+      preferCSSPageSize: true,
+    };
+
+    await page.pdf(options);
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    throw error;
+  } finally {
+    if (page) {
+      page.removeAllListeners();
+      await page.close();
+    }
+    if (browser) {
+      browserPool.releaseBrowser(browser);
+    }
   }
-
-  const htmlChunks = [];
-
-  for (let orderIndex = 0; orderIndex < orderList.length; orderIndex++) {
-    const order = orderList[orderIndex];
-    const items = order.items || [];
-
-    const totalRows = countTotalItems(items);
-    const totalPages = Math.ceil(totalRows / ITEMS_PER_PAGE);
-
-    const hasWeightableItems = items.some(
-      (item) => extractWeight(item.weight) > 0
-    );
-
-    const itemPages = splitItemsIntoPages(items, ITEMS_PER_PAGE);
-
-    for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
-      const isFirstPageOfOrder = pageIndex === 0;
-      const shouldBreakBefore = orderIndex > 0 && isFirstPageOfOrder;
-
-      const pageHTML = generatePageHTML(
-        order,
-        itemPages[pageIndex],
-        pageIndex,
-        totalPages,
-        shouldBreakBefore,
-        hasWeightableItems
-      );
-
-      htmlChunks.push(pageHTML);
-    }
-  }
-
-  const htmlContent = htmlChunks.join("");
-
-  const browser = await puppeteer.launch({
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-    ],
-    headless: true,
-    timeout: 0,
-  });
-
-  const page = await browser.newPage();
-
-  await page.setViewport({ width: 1200, height: 1553 });
-  await page.setRequestInterception(true);
-  page.on("request", (req) => {
-    const resourceType = req.resourceType();
-    if (resourceType === "document" || resourceType === "image") {
-      req.continue();
-    } else {
-      req.abort();
-    }
-  });
-
-  await page.setContent(htmlContent, {
-    waitUntil: "domcontentloaded",
-    timeout: 60000,
-  });
-
-  const options = {
-    path: outputPath,
-    format: 'Letter', 
-    printBackground: true, 
-    margin: {
-      top: "0.1in", 
-      right: "0.1in",
-      bottom: "0.1in",
-      left: "0.1in",
-    },
-    preferCSSPageSize: true,
-  };
-
-  await page.pdf(options);
-
-  await page.close();
-  await browser.close();
 }
 
 module.exports = {
