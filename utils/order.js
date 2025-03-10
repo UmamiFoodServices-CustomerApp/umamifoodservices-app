@@ -181,6 +181,27 @@ const getUnitTotal = (item) => {
   return formatMoney(item?.secondaryQuantity * finalUnitPrice);
 };
 
+ const capitalizeWords = str => {
+  if (!str) return ''
+
+  const parts = str?.split(',')?.map(part => part?.trim())
+
+  const capitalizedParts = parts?.map(part =>
+    part
+      ?.toLowerCase()
+      ?.split(' ')
+      ?.map(word => word?.charAt(0)?.toUpperCase() + word?.slice(1))
+      ?.join(' ')
+  )
+
+  let formattedAddress = capitalizedParts?.join(', ')
+
+  formattedAddress = formattedAddress?.replace(/\b(ca)\b/gi, 'CA')
+
+  return formattedAddress
+}
+
+
 async function generatePdf(orders, outputPath) {
   let browser = null;
   let page = null;
@@ -315,21 +336,22 @@ async function generatePdf(orders, outputPath) {
             <div style="flex: 1; font-size: 14px; display: flex; flex-direction: column; gap: 0.3rem;"> 
               <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">Bill To</p>
               <p style="margin: 0;">${
-                order?.name || order?.invoice?.customer?.name
+                capitalizeWords(order?.name || order?.invoice?.customer?.name)
               }</p>
               <p style="margin: 0;">${
-                order?.businessName || order?.invoice?.customer?.businessName
+                capitalizeWords(order?.businessName || order?.invoice?.customer?.businessName)
               }</p>
               <p style="margin: 0;">${
-                order?.confirmedDeliveryAddress ||
-                order?.invoice?.customer?.confirmedDeliveryAddress
+                capitalizeWords(order?.confirmedDeliveryAddress ||
+                order?.invoice?.customer?.confirmedDeliveryAddress)
               }</p>
             </div>
-            <div style="margin-left: 1.5rem; font-size: 11px; display: flex; flex-direction: row; gap: 1rem; align-items: center;"> 
+            <div style="margin-left: 1.5rem; font-size: 14px; display: flex; flex-direction: row; gap: 1rem; align-items: center;"> 
               <div style="text-align: right; display: flex; flex-direction: column; gap: 0.4rem;">
                 <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">Invoice #</p>
                 <p style="margin: 0;">Invoice Date:</p>
                 <p style="margin: 0;">Due Date:</p>
+                <p style="margin: 0;">Driver :</p>
               </div>
               <div style="text-align: right; display: flex; flex-direction: column; gap: 0.4rem;">
                 <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">${
@@ -344,6 +366,11 @@ async function generatePdf(orders, outputPath) {
                   order?.dueDateTimestamp
                     ? getDeliveryTime(order.dueDateTimestamp)
                     : "NA"
+                }</p>
+                <p style="margin: 0;">${
+                  order?.driver
+                    ? order.driver : 
+                    '-'
                 }</p>
               </div>
             </div>
