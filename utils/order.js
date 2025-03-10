@@ -325,11 +325,12 @@ async function generatePdf(orders, outputPath) {
                 order?.invoice?.customer?.confirmedDeliveryAddress
               }</p>
             </div>
-            <div style="margin-left: 1.5rem; font-size: 11px; display: flex; flex-direction: row; gap: 1rem; align-items: center;"> 
+            <div style="margin-left: 1.5rem; font-size: 14px; display: flex; flex-direction: row; gap: 1rem; align-items: center;"> 
               <div style="text-align: right; display: flex; flex-direction: column; gap: 0.4rem;">
                 <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">Invoice #</p>
                 <p style="margin: 0;">Invoice Date:</p>
                 <p style="margin: 0;">Due Date:</p>
+                <p style="margin: 0;">Driver :</p>
               </div>
               <div style="text-align: right; display: flex; flex-direction: column; gap: 0.4rem;">
                 <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">${
@@ -344,6 +345,11 @@ async function generatePdf(orders, outputPath) {
                   order?.dueDateTimestamp
                     ? getDeliveryTime(order.dueDateTimestamp)
                     : "NA"
+                }</p>
+                <p style="margin: 0;">${
+                  order?.driver
+                    ? order.driver : 
+                    '-'
                 }</p>
               </div>
             </div>
