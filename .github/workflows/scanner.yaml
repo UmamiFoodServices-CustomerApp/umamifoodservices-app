@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 10
 
     strategy:
+      fail-fast: false
       matrix:
         scanners: ["secret_scanning"]
 
@@ -32,7 +33,7 @@ jobs:
             username: ${{ secrets.DOCKERHUB_USERNAME }}
             password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials (Tepia SES)
         id: creds
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -40,13 +41,23 @@ jobs:
           role-to-assume: ${{ secrets.SES_OIDC_ROLE_ARN }}
           role-session-name: ses-oidc-session
           output-credentials: true
+
+      - name: Configure AWS Credentials (Tepia Github OIDC)
+        id: tepia_creds
+        if: matrix.scanners == 'container_secret_scanning'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          role-session-name: Tepia-Github-OIDC-Role
+          output-credentials: true
             
       - name: Run Secret Scanner
         env:
             TEPIA_LOG_LEVEL: ${{ vars.TEPIA_LOG_LEVEL }}
-            TEPIA_AWS_ACCESS_KEY_ID: ${{ steps.creds.outputs.aws-access-key-id }}
-            TEPIA_AWS_SECRET_ACCESS_KEY: ${{ steps.creds.outputs.aws-secret-access-key }}
-            TEPIA_AWS_SESSION_TOKEN: ${{ steps.creds.outputs.aws-session-token }}
+            TEPIA_AWS_ACCESS_KEY_ID_SES: ${{ steps.creds.outputs.aws-access-key-id }}
+            TEPIA_AWS_SECRET_ACCESS_KEY_SES: ${{ steps.creds.outputs.aws-secret-access-key }}
+            TEPIA_AWS_SESSION_TOKEN_SES: ${{ steps.creds.outputs.aws-session-token }}
             TEPIA_AWS_DEFAULT_REGION: us-east-1
             TEPIA_CLONE_PATH: ${{ github.workspace }}
             TEPIA_REPO_FULL_NAME: ${{ github.repository }}
@@ -59,14 +70,26 @@ jobs:
             TEPIA_SENDER: ${{ vars.TEPIA_SENDER }}
             TEPIA_EXECUTION_STEP: ${{ matrix.scanners }}
             TEPIA_DRY_RUN: ${{ vars.TEPIA_DRY_RUN }}
-            TEPIA_GITHUB_AUTH_TOKEN: ${{ secrets.TEPIA_GIT_TOKEN }}
             TEPIA_DRY_RUN_EMAIL: ${{ vars.TEPIA_DRY_RUN_EMAIL }}
             TEPIA_ADDITIONAL_EMAILS: ${{ vars.TEPIA_ADDITIONAL_EMAILS }}
             TEPIA_GITHUB_PRIVATE_KEY: ${{ secrets.TEPIA_GITHUB_PRIVATE_KEY }}
             TEPIA_GITHUB_APP_ID: ${{ secrets.TEPIA_GITHUB_APP_ID }}
             TEPIA_GITHUB_APP_INSTALLATION_ID: ${{ secrets.TEPIA_GITHUB_APP_INSTALLATION_ID }}
+            TEPIA_AWS_REGION: ${{ vars.AWS_REGION }}
+            TEPIA_CONTAINERS: ${{ vars.ECR_CONTAINERS }}
+            TEPIA_SESSION_NAME: ${{ vars.SESSION_NAME }}
+            TEPIA_ACCOUNT_ID: ${{ vars.ACCOUNT_ID }}
+            TEPIA_CROSS_ACCOUNT_ID: ${{ vars.CROSS_ACCOUNT_ID }}
+            TEPIA_AWS_ACCESS_KEY_ID: ${{ steps.tepia_creds.outputs.aws-access-key-id }}
+            TEPIA_AWS_SECRET_ACCESS_KEY: ${{ steps.tepia_creds.outputs.aws-secret-access-key }}
+            TEPIA_AWS_SESSION_TOKEN: ${{ steps.tepia_creds.outputs.aws-session-token }}            
+            TEPIA_DEVOPS_EMAILS: ${{ vars.DEVOPS_EMAILS }}
 
             IMAGE: jamestepia/scanner:production
         run: |
-            x=$(docker run -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE --env-file <(env | grep TEPIA_) --env-file <(env | grep AWS_) ${{ env.IMAGE }})
-            echo $x
+            docker run \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
+              --env-file <(env | grep TEPIA_) \
+              --env-file <(env | grep AWS_) \
+              ${{ env.IMAGE }}
