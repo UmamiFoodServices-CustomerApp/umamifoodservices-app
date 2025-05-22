@@ -10,6 +10,51 @@ const formatMoney = (amount, precision = true) => {
   return `$${amount ?? 0}`;
 };
 
+const calculateInternalCost = (items) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return 0;
+  }
+
+  const validIntegerValue = (value) =>
+    !!value &&
+    !Number.isNaN(parseFloat(value)) &&
+    Number.isNaN(Number(value)) === false &&
+    !!Number(value);
+
+  return items.reduce((totalCost, item) => {
+    let itemCost = 0;
+
+    // Calculate cost based on InternalPrice and primaryQuantity
+    if (
+      validIntegerValue(item.InternalPrice) &&
+      validIntegerValue(item.primaryQuantity)
+    ) {
+      const internalPrice = parseFloat(item.InternalPrice);
+      const primaryQty = parseFloat(item.primaryQuantity);
+
+      itemCost += internalPrice * primaryQty;
+    }
+
+    // Calculate cost based on InternalUnitPrice and weight/secondaryQuantity
+    if (validIntegerValue(item.InternalUnitPrice)) {
+      const internalUnitPrice = parseFloat(item.InternalUnitPrice);
+
+      // Check for weight first (higher priority)
+      if (validIntegerValue(item.weight)) {
+        const weight = parseFloat(item.weight);
+        itemCost += internalUnitPrice * weight;
+      }
+      // If no valid weight, use secondaryQuantity
+      else if (validIntegerValue(item.secondaryQuantity)) {
+        const secondaryQty = parseFloat(item.secondaryQuantity);
+        itemCost += internalUnitPrice * secondaryQty;
+      }
+    }
+
+    return +parseFloat(totalCost + itemCost).toFixed(2);
+  }, 0);
+};
+
 const getItemQuantity = (item) => {
   if (item.secondaryQuantity > 0 && item.primaryQuantity > 0) {
     return `${item.primaryQuantity}/${item.secondaryQuantity}`;
@@ -181,26 +226,25 @@ const getUnitTotal = (item) => {
   return formatMoney(item?.secondaryQuantity * finalUnitPrice);
 };
 
- const capitalizeWords = str => {
-  if (!str) return ''
+const capitalizeWords = (str) => {
+  if (!str) return "";
 
-  const parts = str?.split(',')?.map(part => part?.trim())
+  const parts = str?.split(",")?.map((part) => part?.trim());
 
-  const capitalizedParts = parts?.map(part =>
+  const capitalizedParts = parts?.map((part) =>
     part
       ?.toLowerCase()
-      ?.split(' ')
-      ?.map(word => word?.charAt(0)?.toUpperCase() + word?.slice(1))
-      ?.join(' ')
-  )
+      ?.split(" ")
+      ?.map((word) => word?.charAt(0)?.toUpperCase() + word?.slice(1))
+      ?.join(" ")
+  );
 
-  let formattedAddress = capitalizedParts?.join(', ')
+  let formattedAddress = capitalizedParts?.join(", ");
 
-  formattedAddress = formattedAddress?.replace(/\b(ca)\b/gi, 'CA')
+  formattedAddress = formattedAddress?.replace(/\b(ca)\b/gi, "CA");
 
-  return formattedAddress
-}
-
+  return formattedAddress;
+};
 
 async function generatePdf(orders, outputPath) {
   let browser = null;
@@ -335,16 +379,16 @@ async function generatePdf(orders, outputPath) {
           <div style="color: #4a4a4a; font-family: Helvetica; display: flex; justify-content: space-between; padding: 0.50rem 1rem;">
             <div style="flex: 1; font-size: 14px; display: flex; flex-direction: column; gap: 0.3rem;"> 
               <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">Bill To</p>
-              <p style="margin: 0;">${
-                capitalizeWords(order?.name || order?.invoice?.customer?.name)
-              }</p>
-              <p style="margin: 0;">${
-                capitalizeWords(order?.businessName || order?.invoice?.customer?.businessName)
-              }</p>
-              <p style="margin: 0;">${
-                capitalizeWords(order?.confirmedDeliveryAddress ||
-                order?.invoice?.customer?.confirmedDeliveryAddress)
-              }</p>
+              <p style="margin: 0;">${capitalizeWords(
+                order?.name || order?.invoice?.customer?.name
+              )}</p>
+              <p style="margin: 0;">${capitalizeWords(
+                order?.businessName || order?.invoice?.customer?.businessName
+              )}</p>
+              <p style="margin: 0;">${capitalizeWords(
+                order?.confirmedDeliveryAddress ||
+                  order?.invoice?.customer?.confirmedDeliveryAddress
+              )}</p>
             </div>
             <div style="margin-left: 1.5rem; font-size: 14px; display: flex; flex-direction: row; gap: 1rem; align-items: center;"> 
               <div style="text-align: right; display: flex; flex-direction: column; gap: 0.4rem;">
@@ -367,11 +411,7 @@ async function generatePdf(orders, outputPath) {
                     ? getDeliveryTime(order.dueDateTimestamp)
                     : "NA"
                 }</p>
-                <p style="margin: 0;">${
-                  order?.driver
-                    ? order.driver : 
-                    '-'
-                }</p>
+                <p style="margin: 0;">${order?.driver ? order.driver : "-"}</p>
               </div>
             </div>
           </div>
@@ -549,4 +589,5 @@ module.exports = {
   getUnitItemName,
   getCaseItemName,
   generatePdf,
+  calculateInternalCost,
 };

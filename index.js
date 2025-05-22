@@ -9,11 +9,10 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const cors = require("cors");
 const { getAdminInviteEmail } = require("./emails/adminInvite");
 const fs = require("fs");
-const { updateDoc } = require("firebase/firestore");
 
 const firebaseAdmin = require("firebase-admin");
 
-const { generatePdf } = require("./utils/order");
+const { generatePdf, calculateInternalCost } = require("./utils/order");
 
 const serviceAccount = {
   type: "service_account",
@@ -906,6 +905,92 @@ app.post(
 );
 
 require("./controllers/email.controllers")(app, db, bodyParser);
+
+app.get("/migrateInternalCost", async (req, res) => {
+  try {
+    const collections = ["confirmed", "completed"];
+    let totalProcessed = 0;
+    let batchCounts = {};
+
+    for (const collectionName of collections) {
+      console.log(`Starting to process collection: ${collectionName}`);
+      batchCounts[collectionName] = 0;
+
+      const collectionRef = db.collection(collectionName);
+
+      let lastDoc = null;
+      let processedInCollection = 0;
+      const BATCH_SIZE = 500;
+
+      while (true) {
+        let batch = db.batch();
+        let batchCount = 0;
+
+        let query = collectionRef.orderBy("totalCost").limit(BATCH_SIZE);
+        if (lastDoc) {
+          query = query.startAfter(lastDoc);
+        }
+
+        const snapshot = await query.get();
+
+        if (snapshot.empty) {
+          console.log(`No more documents in ${collectionName}`);
+          break;
+        }
+
+        snapshot.docs.forEach((doc) => {
+          const order = doc.data();
+          const items = order.items;
+
+          if (items && Array.isArray(items)) {
+            const internalCost = calculateInternalCost(items);
+
+            batch.update(doc.ref, { internalCost });
+
+            batchCount++;
+          } else {
+            console.warn(
+              `Skipping document ${doc.id} - invalid or missing items array`
+            );
+          }
+        });
+
+        if (batchCount > 0) {
+          await batch.commit();
+          processedInCollection += batchCount;
+          totalProcessed += batchCount;
+          batchCounts[collectionName] += batchCount;
+          console.log(
+            `Batch committed in ${collectionName}: ${batchCount} documents updated`
+          );
+        }
+
+        lastDoc = snapshot.docs[snapshot.docs.length - 1];
+
+        if (snapshot.docs.length < BATCH_SIZE) {
+          console.log(
+            `Finished processing ${collectionName}: ${processedInCollection} documents updated`
+          );
+          break;
+        }
+      }
+    }
+
+    res.status(200).json({
+      message: "Internal Cost Migration Completed Successfully",
+      totalProcessed: totalProcessed,
+      collectionCounts: batchCounts,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("migrateInternalCost Error:", error);
+    res.status(500).json({
+      message: "Internal Cost Migration Failed",
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
 
 // listen for requests :)
 const listener = app.listen(process.env.PORT || 3000, function () {
