@@ -920,7 +920,7 @@ app.get("/migrateInternalCost", async (req, res) => {
 
       let lastDoc = null;
       let processedInCollection = 0;
-      const BATCH_SIZE = 500;
+      const BATCH_SIZE = 2000;
 
       while (true) {
         let batch = db.batch();
