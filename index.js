@@ -992,7 +992,167 @@ app.get("/migrateInternalCost", async (req, res) => {
   }
 });
 
-// listen for requests :)
+app.post(
+  "/update-user-email",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (req, res) => {
+    const { uid, newEmail } = req.body;
+
+    try {
+      // Validation
+      if (!uid || !newEmail) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          message: "Both uid and newEmail are required",
+          code: "MISSING_FIELDS",
+        });
+      }
+
+      // Validate UID format
+      if (typeof uid !== "string" || uid.length < 10) {
+        return res.status(400).json({
+          error: "Invalid UID format",
+          message: "UID must be a valid string",
+          code: "INVALID_UID",
+        });
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newEmail)) {
+        return res.status(400).json({
+          error: "Invalid email format",
+          message: "Please provide a valid email address",
+          code: "INVALID_EMAIL",
+        });
+      }
+
+      // Sanitize email
+      const sanitizedEmail = newEmail.toLowerCase().trim();
+
+      // Check if the user exists first
+      let userRecord;
+      try {
+        userRecord = await firebaseAdmin.auth().getUser(uid);
+      } catch (getUserError) {
+        if (getUserError.code === "auth/user-not-found") {
+          return res.status(404).json({
+            error: "User not found",
+            message: "No user found with the provided UID",
+            code: "USER_NOT_FOUND",
+          });
+        }
+        throw getUserError;
+      }
+
+      // Store old email for logging/audit purposes
+      const oldEmail = userRecord.email;
+
+      // Check if the new email is the same as current email
+      if (oldEmail === sanitizedEmail) {
+        return res.status(400).json({
+          error: "Email unchanged",
+          message: "The new email is the same as the current email",
+          code: "EMAIL_UNCHANGED",
+        });
+      }
+
+      // Check if the new email is already in use by another user
+      try {
+        await firebaseAdmin.auth().getUserByEmail(sanitizedEmail);
+        // If we reach here, email is already in use
+        return res.status(409).json({
+          error: "Email already in use",
+          message:
+            "The email address is already associated with another account",
+          code: "EMAIL_ALREADY_EXISTS",
+        });
+      } catch (emailCheckError) {
+        // If error code is 'auth/user-not-found', email is available (which is what we want)
+        if (emailCheckError.code !== "auth/user-not-found") {
+          throw emailCheckError;
+        }
+      }
+
+      // Update the user's email in Firebase Auth
+      const updatedUser = await firebaseAdmin.auth().updateUser(uid, {
+        email: sanitizedEmail,
+        emailVerified: true, // Reset email verification status
+      });
+
+      // Update the user's email in Firestore as well
+      try {
+        const userDocRef = db.collection("users").doc(uid);
+        const userDoc = await userDocRef.get();
+
+        if (userDoc.exists) {
+          await userDocRef.update({
+            email: sanitizedEmail,
+            emailVerified: true,
+            lastEmailUpdate: new Date().toISOString(),
+          });
+        }
+      } catch (firestoreError) {
+        console.warn(
+          "Failed to update user email in Firestore:",
+          firestoreError
+        );
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Email updated successfully",
+        data: {
+          uid: updatedUser.uid,
+          email: updatedUser.email,
+          emailVerified: updatedUser.emailVerified,
+          lastUpdated: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error("Error updating user email:", error);
+
+      // Handle specific Firebase Auth errors
+      let statusCode = 500;
+      let errorMessage = "Internal server error";
+      let errorCode = "INTERNAL_ERROR";
+
+      switch (error.code) {
+        case "auth/email-already-exists":
+          statusCode = 409;
+          errorMessage =
+            "The email address is already in use by another account";
+          errorCode = "EMAIL_ALREADY_EXISTS";
+          break;
+        case "auth/invalid-email":
+          statusCode = 400;
+          errorMessage = "The email address is not valid";
+          errorCode = "INVALID_EMAIL";
+          break;
+        case "auth/user-not-found":
+          statusCode = 404;
+          errorMessage = "No user found with the provided UID";
+          errorCode = "USER_NOT_FOUND";
+          break;
+        case "auth/invalid-uid":
+          statusCode = 400;
+          errorMessage = "The provided UID is invalid";
+          errorCode = "INVALID_UID";
+          break;
+        default:
+          console.error("Unexpected error:", error);
+      }
+
+      res.status(statusCode).json({
+        error: errorMessage,
+        code: errorCode,
+        ...(process.env.NODE_ENV === "development" && { debug: error.message }),
+      });
+    }
+  }
+);
+
 const listener = app.listen(process.env.PORT || 3000, function () {
   console.log("Your app is listening on port " + listener.address().port);
 });
