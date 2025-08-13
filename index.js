@@ -776,6 +776,7 @@ app.post(
         state,
         city,
         zipCode,
+        receiveAnnouncements,
       } = request.body;
 
       const missingFields = [];
@@ -789,6 +790,7 @@ app.post(
       if (!state) missingFields.push("state");
       if (!city) missingFields.push("city");
       if (!zipCode) missingFields.push("zipCode");
+      if (!receiveAnnouncements) missingFields.push("receiveAnnouncements");
 
       if (missingFields.length > 0) {
         return res.status(400).send({
@@ -824,6 +826,7 @@ app.post(
         state,
         zip: zipCode,
         businessName: fullName,
+        receiveAnnouncements,
       });
 
       await db.collection("users").doc(user.uid).set(userDocData);
