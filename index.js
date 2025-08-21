@@ -73,6 +73,114 @@ const defaultClient = new Client({
 
 const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
 
+setTimeout(async () => {
+  // update all customers to receive announcements (once when the server starts)
+  const customers = await db.collection("users").get();
+  if (!scheduledMessages.empty) {
+    customers.docs.forEach(async (doc) => {
+      const customerData = doc.data();
+      if (customerData.receiveAnnouncements === undefined) {
+        await updateDoc(doc.ref, { receiveAnnouncements: true })
+      }
+    });
+  }
+}, 500);
+
+// periodically check for the new scheduled messages (every minute)
+setInterval(() => {
+  const systemMessagesCollection = db.collection("systemMessages")
+  const usersCollection = db.collection("users")
+  const systemAnnouncementsCollection = db.collection("systemAnnouncements")
+  const systemTextMessagesCollection = db.collection("systemTextMessages")
+  const scheduledMessages = systemMessagesCollection
+    .where('status', '==', 'scheduled')
+    .get()
+  
+  if (!scheduledMessages.empty) {
+    scheduledMessages.docs.forEach(async (doc) => {
+
+      const messageData = doc.data();
+
+      const date = messageData.date;
+      const time = messageData.time;
+      const timezoneOffset = new Date(messageData.createdAt.replace("at", "")).getTimezoneOffset()
+
+      const offset = timezoneOffset / 60;
+      var scheduleDate = new Date(date + ' ' + time + ':00')
+      scheduleDate.setHours(scheduleDate.getHours() - offset);
+      const currentDateTime = new Date()
+
+      if (scheduleDate.getTime() <= currentDateTime.getTime()) {
+
+        await updateDoc(doc, {
+          status: 'sent',
+          ...doc.data()
+        })
+
+        const customers = await usersCollection.where('receiveAnnouncements', '==', true).get();
+        if (!customers.empty) {
+          customers.docs.forEach(async (customerDoc) => {
+            const customerData = customerDoc.data();
+            
+            const userDocAnnouncementData = makeFormObject({
+              systemMessageId: messageData.id,
+              customerId: customerData.id,
+              message: messageData.message,
+              subject: messageData.subject,
+              status: 'un-read',
+              subject: messageData.subject
+            });
+            if (systemAnnouncementsCollection
+              .where('systemMessageId', '==', messageData.id)
+              .where('customerId', '==', customerData.id)
+              .get()
+              .empty) {
+              await systemAnnouncementsCollection.doc().set(userDocAnnouncementData)
+            }
+
+            const userDocTextData = makeFormObject({
+              systemMessageId: messageData.id,
+              customerId: customerData.id,
+              phone: customerData.phone,
+              message: messageData.message,
+              subject: messageData.subject,
+              status: 'pending',
+              subject: messageData.subject
+            });
+            if (systemTextMessagesCollection
+              .where('systemMessageId', '==', messageData.id)
+              .where('customerId', '==', customerData.id)
+              .get()
+              .empty) {
+              await systemTextMessagesCollection.doc().set(userDocTextData)
+            }
+          });
+        }
+      }
+    });
+  }
+}, 60000);
+
+// periodically send text messages (every minute)
+setInterval(() => {
+  const systemTextMessagesCollection = db.collection("systemTextMessages")
+  const scheduledTextMessages = systemTextMessagesCollection
+    .where('status', '==', 'pending')
+    .get()
+
+  if (!scheduledTextMessages.empty) {
+    scheduledTextMessages.docs.forEach(async (doc) => {
+      // update scheduled message to isQueued: yes
+      await updateDoc(doc, {
+        status: 'sent',
+        ...doc.date()
+      })
+
+      const messageData = doc.data();
+    });
+  }
+}, 60000);
+
 app.use(cors());
 
 app.post(
