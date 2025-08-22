@@ -1,6 +1,10 @@
-const { formatMoney, getDeliveryTime } = require("../utils/order");
+const { formatMoney, getDeliveryTime, extractDate } = require("../utils/order");
 
 module.exports = function sendInvoiceHtmlBody(order) {
+  const deliveryDateResult = order.confirmedDeliveryDate
+    ? extractDate(order.confirmedDeliveryDate)
+    : getDeliveryTime(order.deliveryDateTimestamp);
+
   return `<div style="background-color: #F7FAFC; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-width: 600px; margin: auto;">
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; margin: auto; background-color: #FFFFFF; padding: 2rem; border-radius: 0.5rem;">
         <tr>
@@ -29,9 +33,7 @@ module.exports = function sendInvoiceHtmlBody(order) {
               </tr>
                <tr>
                 <td style="padding-bottom: 1rem; color: #718096; font-weight: 500;">Invoice Date:</td>
-                <td style="padding-bottom: 1rem; text-align: right; color: #1A202C;">${getDeliveryTime(
-                  order.deliveryDateTimestamp
-                )}</td>
+                <td style="padding-bottom: 1rem; text-align: right; color: #1A202C;">${deliveryDateResult}</td>
               </tr>
                <tr>
                 <td style="padding-bottom: 0.3rem; color: #718096; font-weight: 500;">Amount Due:</td>
