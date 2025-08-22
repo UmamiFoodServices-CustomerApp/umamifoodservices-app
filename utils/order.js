@@ -147,6 +147,20 @@ const getDeliveryTime = (
   return moment(date * 1000).format(outputFormat);
 };
 
+const extractDate = (dateString) => {
+  if (dateString) {
+    return dateString?.split(" ")?.[0] || "NA";
+  }
+  return "NA";
+};
+
+const formatDueDate = (date) => {
+  if (!date) {
+    return "-";
+  }
+  return moment(date, "YYYY-MM-DD").format("MM/DD/YYYY");
+};
+
 const getCaseTotal = (item) => {
   const secondaryQuantity = parseFloat(item?.secondaryQuantity || 0);
   if (extractWeight(item?.weight) > 0 && secondaryQuantity === 0) {
@@ -181,26 +195,25 @@ const getUnitTotal = (item) => {
   return formatMoney(item?.secondaryQuantity * finalUnitPrice);
 };
 
- const capitalizeWords = str => {
-  if (!str) return ''
+const capitalizeWords = (str) => {
+  if (!str) return "";
 
-  const parts = str?.split(',')?.map(part => part?.trim())
+  const parts = str?.split(",")?.map((part) => part?.trim());
 
-  const capitalizedParts = parts?.map(part =>
+  const capitalizedParts = parts?.map((part) =>
     part
       ?.toLowerCase()
-      ?.split(' ')
-      ?.map(word => word?.charAt(0)?.toUpperCase() + word?.slice(1))
-      ?.join(' ')
-  )
+      ?.split(" ")
+      ?.map((word) => word?.charAt(0)?.toUpperCase() + word?.slice(1))
+      ?.join(" ")
+  );
 
-  let formattedAddress = capitalizedParts?.join(', ')
+  let formattedAddress = capitalizedParts?.join(", ");
 
-  formattedAddress = formattedAddress?.replace(/\b(ca)\b/gi, 'CA')
+  formattedAddress = formattedAddress?.replace(/\b(ca)\b/gi, "CA");
 
-  return formattedAddress
-}
-
+  return formattedAddress;
+};
 
 async function generatePdf(orders, outputPath) {
   let browser = null;
@@ -318,6 +331,16 @@ async function generatePdf(orders, outputPath) {
         })
         .join("");
 
+      const deliveryDateResult = order.confirmedDeliveryDate
+        ? extractDate(order.confirmedDeliveryDate)
+        : getDeliveryTime(order.deliveryDateTimestamp);
+
+      const dueDateResult = order.dueDate
+        ? formatDueDate(order.dueDate)
+        : order?.dueDateTimestamp
+        ? getDeliveryTime(order.dueDateTimestamp)
+        : "-";
+
       return `
       <div id="umani-app-invoice-form-${order.id}-page-${
         pageIndex + 1
@@ -335,16 +358,16 @@ async function generatePdf(orders, outputPath) {
           <div style="color: #4a4a4a; font-family: Helvetica; display: flex; justify-content: space-between; padding: 0.50rem 1rem;">
             <div style="flex: 1; font-size: 14px; display: flex; flex-direction: column; gap: 0.3rem;"> 
               <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">Bill To</p>
-              <p style="margin: 0;">${
-                capitalizeWords(order?.name || order?.invoice?.customer?.name)
-              }</p>
-              <p style="margin: 0;">${
-                capitalizeWords(order?.businessName || order?.invoice?.customer?.businessName)
-              }</p>
-              <p style="margin: 0;">${
-                capitalizeWords(order?.confirmedDeliveryAddress ||
-                order?.invoice?.customer?.confirmedDeliveryAddress)
-              }</p>
+              <p style="margin: 0;">${capitalizeWords(
+                order?.name || order?.invoice?.customer?.name
+              )}</p>
+              <p style="margin: 0;">${capitalizeWords(
+                order?.businessName || order?.invoice?.customer?.businessName
+              )}</p>
+              <p style="margin: 0;">${capitalizeWords(
+                order?.confirmedDeliveryAddress ||
+                  order?.invoice?.customer?.confirmedDeliveryAddress
+              )}</p>
             </div>
             <div style="margin-left: 1.5rem; font-size: 14px; display: flex; flex-direction: row; gap: 1rem; align-items: center;"> 
               <div style="text-align: right; display: flex; flex-direction: column; gap: 0.4rem;">
@@ -357,21 +380,9 @@ async function generatePdf(orders, outputPath) {
                 <p style="font-weight: bold; font-family: Helvetica-Bold; color: #1a202c; margin: 0;">${
                   order?.orderId ?? "-"
                 }</p>
-                <p style="margin: 0;">${
-                  order?.deliveryDateTimestamp
-                    ? getDeliveryTime(order.deliveryDateTimestamp)
-                    : "NA"
-                }</p>
-                <p style="margin: 0;">${
-                  order?.dueDateTimestamp
-                    ? getDeliveryTime(order.dueDateTimestamp)
-                    : "NA"
-                }</p>
-                <p style="margin: 0;">${
-                  order?.driver
-                    ? order.driver : 
-                    '-'
-                }</p>
+                <p style="margin: 0;">${deliveryDateResult}</p>
+                <p style="margin: 0;">${dueDateResult || "NA"}</p>
+                <p style="margin: 0;">${order?.driver ? order.driver : "-"}</p>
               </div>
             </div>
           </div>
@@ -549,4 +560,6 @@ module.exports = {
   getUnitItemName,
   getCaseItemName,
   generatePdf,
+  extractDate,
+  formatDueDate,
 };
