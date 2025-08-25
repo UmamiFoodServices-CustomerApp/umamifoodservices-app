@@ -161,25 +161,26 @@ setInterval(() => {
   }
 }, 60000);
 
+// 08/25 planning to send sms from firebase trigger functions.
 // periodically send text messages (every minute)
-setInterval(() => {
-  const systemTextMessagesCollection = db.collection("systemTextMessages")
-  const scheduledTextMessages = systemTextMessagesCollection
-    .where('status', '==', 'pending')
-    .get()
+// setInterval(() => {
+//   const systemTextMessagesCollection = db.collection("systemTextMessages")
+//   const scheduledTextMessages = systemTextMessagesCollection
+//     .where('status', '==', 'pending')
+//     .get()
 
-  if (!scheduledTextMessages.empty) {
-    scheduledTextMessages.docs.forEach(async (doc) => {
-      // update scheduled message to isQueued: yes
-      await updateDoc(doc, {
-        status: 'sent',
-        ...doc.date()
-      })
+//   if (!scheduledTextMessages.empty) {
+//     scheduledTextMessages.docs.forEach(async (doc) => {
+//        update scheduled message to isQueued: yes
+//       await updateDoc(doc, {
+//         status: 'sent',
+//         ...doc.date()
+//       })
 
-      const messageData = doc.data();
-    });
-  }
-}, 60000);
+//       const messageData = doc.data();
+//     });
+//   }
+// }, 60000);
 
 app.use(cors());
 
