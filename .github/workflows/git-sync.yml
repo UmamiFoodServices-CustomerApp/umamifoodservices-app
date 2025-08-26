@@ -1,0 +1,71 @@
+name: Sync Repositories with Deploy Keys
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      destination_repo:
+        required: true
+        description: 'Enter the destination repo name (Eg: InspectReply-AI/server)'
+        type: string
+        default: "UmamiFoodServices-CustomerApp-PROD/umamifoodservices-app"
+      destination_branch:
+        required: true
+        description: 'Select the destination branch to sync to'
+        type: choice
+        options: ['master']
+
+jobs:
+  git-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set default values if missing
+        run: |          
+          echo "DESTINATION_REPO=${{ github.event.inputs.destination_repo || 'UmamiFoodServices-CustomerApp-PROD/umamifoodservices-app' }}" >> $GITHUB_ENV
+          echo "DESTINATION_BRANCH=${{ github.event.inputs.destination_branch || github.ref_name }}" >> $GITHUB_ENV
+
+      # Checkout the source repository
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # Only fetch the latest commit to reduce the size
+          path: source_repo
+
+      - name: Setup SSH for destination repository
+        run: |
+          echo "${{ secrets.DEPLOY_KEY }}" > /tmp/ssh_key
+          chmod 600 /tmp/ssh_key
+          eval $(ssh-agent -s)
+          ssh-add /tmp/ssh_key
+          
+          # Create the .ssh directory and add GitHub to known_hosts
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      # Checkout the destination repository
+      - name: Checkout destination repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.DESTINATION_REPO }}
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          path: destination_repo
+          ref: ${{ env.DESTINATION_BRANCH }}
+
+      # Copy files from the source repo to the destination repo
+      - name: Sync files
+        run: |
+          mkdir -p ./destination_repo/
+          rsync -av --delete --exclude '.git' --exclude '.github' ./source_repo/ ./destination_repo/
+
+      # Commit and push the changes to the destination repository
+      - name: Commit changes
+        run: |
+          cd destination_repo
+          git config user.name "tepia-user"
+          git config user.email "tepia-devops@tepia.co"
+          git add .
+          git commit -m "Sync from source repository" || echo "No changes to commit"
+          git push origin ${{ env.DESTINATION_BRANCH }}
+          

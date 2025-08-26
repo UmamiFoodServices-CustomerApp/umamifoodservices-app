@@ -49,7 +49,7 @@ module.exports = (app, db) => {
 
   app.post(
     "/email-stripe-invoice",
-    express.raw({ type: "*/*" }),
+    express.raw({ type: "application/json" }),
     async (req, res) => {
       const sig = req.headers["stripe-signature"];
       let event;
@@ -57,8 +57,10 @@ module.exports = (app, db) => {
       console.log("req.body", req.body);
 
       try {
+        // Convert the raw body from Buffer to string
+        const rawBody = req.body.toString("utf8");
         event = stripe.webhooks.constructEvent(
-          req.body,
+          rawBody,
           sig,
           process.env.STRIPE_WEBHOOK_SECRET
         );
@@ -83,7 +85,7 @@ module.exports = (app, db) => {
           html: sendPaymentNotificationHtmlBody(
             customerName,
             amountPaid,
-            customerEmail
+            "kennguyen.987@gmail.com"
           ),
         };
 
