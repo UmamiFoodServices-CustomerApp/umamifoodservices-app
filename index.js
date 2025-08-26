@@ -144,8 +144,7 @@ setInterval(() => {
               phone: customerData.phone,
               message: messageData.message,
               subject: messageData.subject,
-              status: 'pending',
-              subject: messageData.subject
+              status: 'sent'
             });
             if (systemTextMessagesCollection
               .where('systemMessageId', '==', messageData.id)
