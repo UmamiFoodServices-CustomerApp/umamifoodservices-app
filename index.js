@@ -72,85 +72,116 @@ const defaultClient = new Client({
 
 const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
 
-setTimeout(async () => {
-  // update all customers to receive announcements (once when the server starts)
-  const customers = await db.collection("users").get();
-  if (!customers.empty) {
-    customers.docs.forEach(async (doc) => {
-      const customerData = doc.data();
-      if (customerData.receiveAnnouncements === undefined) {
-        await updateDoc(doc.ref, { receiveAnnouncements: true })
-      }
-    });
-  }
-}, 500);
+// DONOT REMOVE THIS - used to clear out old scheduled messages and announcements and set all customers to receive announcements
+// setTimeout(async () => {
+
+//   console.log('clearing out old scheduled messages and announcements')
+//   const scheduledMessages = await db.collection("systemMessages").get()
+//   console.log('deleting scheduled announcements')
+//   if (!scheduledMessages.empty) {
+//     scheduledMessages.docs.forEach(async (doc) => {
+//       await doc.ref.delete()
+//     });
+//   }
+
+//   const deleteAnnouncements = await db.collection("systemAnnouncements").get();
+//   console.log('deleting scheduled announcements for mobile')
+//   if (!deleteAnnouncements.empty) {
+//     deleteAnnouncements.docs.forEach(async (doc) => {
+//       await doc.ref.delete()
+//     });
+//   }
+
+//   const deleteTextMessages = await db.collection("systemTextMessages").get();
+//   console.log('deleting scheduled text messages announcements')
+//   if (!deleteTextMessages.empty) {
+//     deleteTextMessages.docs.forEach(async (doc) => {
+//       await doc.ref.delete()
+//     });
+//   }
+
+//   // update all customers to receive announcements (once when the server starts)
+//   const customers = await db.collection("users").get();
+//   console.log('setting all customers to receive announcements if not set already')
+//   if (!customers.empty) {
+//     customers.docs.forEach(async (doc) => {
+//       const customerData = doc.data();
+//       if (customerData.receiveAnnouncements === undefined) {
+//         const docRef = doc.ref
+//         await docRef.update({ receiveAnnouncements: true })
+//       }
+//     });
+//   }
+// }, 500);
 
 // periodically check for the new scheduled messages (every minute)
-setInterval(() => {
+setInterval(async () => {
   const systemMessagesCollection = db.collection("systemMessages")
   const usersCollection = db.collection("users")
   const systemAnnouncementsCollection = db.collection("systemAnnouncements")
   const systemTextMessagesCollection = db.collection("systemTextMessages")
-  const scheduledMessages = systemMessagesCollection
-    .where('status', '==', 'scheduled')
-    .get()
-
+  const scheduledMessages = await systemMessagesCollection.get()
+  console.log('Preparing to send scheduled messages if any')
   if (!scheduledMessages.empty) {
     scheduledMessages.docs.forEach(async (doc) => {
 
       const messageData = doc.data();
-
-      const date = messageData.date;
-      const time = messageData.time;
-      const timezoneOffset = new Date(messageData.createdAt.replace("at", "")).getTimezoneOffset()
+      const date = messageData.createdAt.toDate();
+      const time = messageData.time + ':00';
+      const timezoneOffset = new Date(date).getTimezoneOffset()
 
       const offset = timezoneOffset / 60;
-      var scheduleDate = new Date(date + ' ' + time + ':00')
+      var scheduleDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), ...time.split(':').map(t => parseInt(t)));
       scheduleDate.setHours(scheduleDate.getHours() - offset);
       const currentDateTime = new Date()
 
       if (scheduleDate.getTime() <= currentDateTime.getTime()) {
-
-        await updateDoc(doc, {
-          status: 'sent',
-          ...doc.data()
+        const docRef = doc.ref
+        await docRef.update({
+          ...doc.data(),
+          status: 'sent'
         })
 
         const customers = await usersCollection.where('receiveAnnouncements', '==', true).get();
+        
         if (!customers.empty) {
           customers.docs.forEach(async (customerDoc) => {
             const customerData = customerDoc.data();
 
-            const userDocAnnouncementData = makeFormObject({
-              systemMessageId: messageData.id,
-              customerId: customerData.id,
+            const userDocAnnouncementData = {
+              systemMessageId: doc.id,
+              customerId: customerDoc.id,
               message: messageData.message,
               subject: messageData.subject,
               status: 'un-read',
               subject: messageData.subject
-            });
-            if (systemAnnouncementsCollection
-              .where('systemMessageId', '==', messageData.id)
-              .where('customerId', '==', customerData.id)
+            };
+            const existingAnnouncements = await systemAnnouncementsCollection
+              .where('systemMessageId', '==', doc.id)
+              .where('customerId', '==', customerDoc.id)
               .get()
-              .empty) {
-              await systemAnnouncementsCollection.doc().set(userDocAnnouncementData)
+            if (existingAnnouncements.empty) {
+              await systemAnnouncementsCollection.add(userDocAnnouncementData)
             }
 
-            const userDocTextData = makeFormObject({
-              systemMessageId: messageData.id,
-              customerId: customerData.id,
-              phone: customerData.phone,
-              message: messageData.message,
-              subject: messageData.subject,
-              status: 'sent'
-            });
-            if (systemTextMessagesCollection
-              .where('systemMessageId', '==', messageData.id)
-              .where('customerId', '==', customerData.id)
-              .get()
-              .empty) {
-              await systemTextMessagesCollection.doc().set(userDocTextData)
+            if (customerData.phone) {
+              const userDocTextData = {
+                systemMessageId: doc.id,
+                customerId: customerDoc.id,
+                phone: customerData.phone,
+                message: messageData.message,
+                subject: messageData.subject,
+                status: 'sent'
+              };
+              const existingTextMessage = await systemTextMessagesCollection
+                .where('systemMessageId', '==', doc.id)
+                .where('customerId', '==', customerDoc.id)
+                .get()
+              if (existingTextMessage.empty) {
+                await systemTextMessagesCollection.add(userDocTextData)
+              }
+            } else {
+              console.log('customerPhoneDoesNotExist', customerDoc.id, customerData)
             }
           });
         }
@@ -179,6 +210,8 @@ setInterval(() => {
 //     });
 //   }
 // }, 60000);
+
+// DONOT DELETE ENDs HERE
 
 app.use(cors());
 
