@@ -1102,7 +1102,7 @@ app.post(
 
       res.status(200).json({
         success: true,
-        message: "Email updated successfully",
+        message: "Email updated successfully!",
         data: {
           uid: updatedUser.uid,
           email: updatedUser.email,
