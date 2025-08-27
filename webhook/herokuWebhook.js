@@ -1,12 +1,8 @@
 const bodyParser = require('body-parser')
 const moment = require('moment')
 
-// const G_CHAT_WEBHOOK_URL =
-//   'https://chat.googleapis.com/v1/spaces/AAAAjDz7VGs/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=TFKs3RHp9Txuw8ezlpnOoyWAJdU4d2b1vZFNdqEp3Yc'
-
-  const G_CHAT_WEBHOOK_URL =
-  'https://chat.googleapis.com/v1/spaces/AAQA0uUdwzc/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=UgICNzOCZgeM1CKB9xASJ5P5_4kWqDfyc1NKYQKoBjc'
-
+const G_CHAT_WEBHOOK_URL =
+  'https://chat.googleapis.com/v1/spaces/AAAAjDz7VGs/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=TFKs3RHp9Txuw8ezlpnOoyWAJdU4d2b1vZFNdqEp3Yc'
 
 module.exports = (app) => {
   app.post(
@@ -16,8 +12,6 @@ module.exports = (app) => {
     async (req, res) => {
       try {
         const { data } = req.body
-
-        console.log(JSON.stringify({ data }, null, 2));
 
         const status = data?.status || ''
 
