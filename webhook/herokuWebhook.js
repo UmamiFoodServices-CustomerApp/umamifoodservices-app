@@ -16,10 +16,15 @@ module.exports = (app) => {
         console.log(JSON.stringify({ data }, null, 2))
 
         const status = data?.status || ''
+
+        if (status === 'pending') {
+          console.log('Skipping pending status notification')
+          return res.sendStatus(200)
+        }
+
         const appName = data?.app?.name || ''
         const commit = data?.slug?.commit?.substring(0, 7) || 'n/a'
         const commitDesc = data?.description || ''
-        const version = data?.version ? `v${data.version}` : 'n/a'
         const userEmail = data?.user?.email || ''
         const timestamp = moment().format('YYYY-MM-DD HH:mm:ss')
 
@@ -42,7 +47,6 @@ module.exports = (app) => {
           `*App:* ${appName}\n` +
           `*Status:* ${statusEmoji}\n` +
           `*Commit:* ${commit} ${commitDesc ? `- ${commitDesc}` : ''}\n` +
-          `*Version:* ${version}\n` +
           `*Triggered by:* ${userEmail}\n` +
           `*Time:* ${timestamp}\n\n` +
           `_Source: Heroku Webhook_`
