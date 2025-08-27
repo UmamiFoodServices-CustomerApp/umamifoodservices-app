@@ -75,7 +75,7 @@ const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
 setTimeout(async () => {
   // update all customers to receive announcements (once when the server starts)
   const customers = await db.collection("users").get();
-  if (!scheduledMessages.empty) {
+  if (!customers.empty) {
     customers.docs.forEach(async (doc) => {
       const customerData = doc.data();
       if (customerData.receiveAnnouncements === undefined) {
