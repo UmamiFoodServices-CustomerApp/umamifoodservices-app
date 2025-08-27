@@ -1049,6 +1049,7 @@ app.post(
 );
 
 require("./controllers/email.controllers")(app, db, bodyParser);
+require("./webhook/herokuWebhook")(app);
 
 app.get("/migrateInternalCost", async (req, res) => {
   try {
@@ -1246,7 +1247,7 @@ app.post(
 
       res.status(200).json({
         success: true,
-        message: "Email updated successfully",
+        message: "Email updated successfully!",
         data: {
           uid: updatedUser.uid,
           email: updatedUser.email,
@@ -1298,5 +1299,8 @@ app.post(
 );
 
 const listener = app.listen(process.env.PORT || 3000, function () {
-  console.log("Your app is listening on port " + listener.address().port);
+    console.log(
+    `🚀 Server running on port http://localhost:${listener.address().port}`
+  );
+
 });
