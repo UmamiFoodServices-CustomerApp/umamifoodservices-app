@@ -1,4 +1,4 @@
-// const { default: puppeteer } = require("puppeteer");
+const { default: puppeteer } = require("puppeteer");
 
 class BrowserPool {
   constructor(maxPoolSize = 2) {

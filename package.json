@@ -20,6 +20,7 @@
     "nodemailer": "^6.9.14",
     "nodemon": "^3.0.1",
     "pdfkit": "^0.13.0",
+    "puppeteer": "24.1.1",
     "square": "7.0.0",
     "stripe": "^10.5.0"
   },
