@@ -72,92 +72,93 @@ const defaultClient = new Client({
 
 const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
 
-setTimeout(async () => {
-  // update all customers to receive announcements (once when the server starts)
-  const customers = await db.collection("users").get();
-  if (!scheduledMessages.empty) {
-    customers.docs.forEach(async (doc) => {
-      const customerData = doc.data();
-      if (customerData.receiveAnnouncements === undefined) {
-        await updateDoc(doc.ref, { receiveAnnouncements: true })
-      }
-    });
-  }
-}, 500);
+// setTimeout(async () => {
+//   // update all customers to receive announcements (once when the server starts)
+//   const customers = await db.collection("users").get();
+  
+//   if (!scheduledMessages.empty) {
+//     customers.docs.forEach(async (doc) => {
+//       const customerData = doc.data();
+//       if (customerData.receiveAnnouncements === undefined) {
+//         await updateDoc(doc.ref, { receiveAnnouncements: true })
+//       }
+//     });
+//   }
+// }, 500);
 
-// periodically check for the new scheduled messages (every minute)
-setInterval(() => {
-  const systemMessagesCollection = db.collection("systemMessages")
-  const usersCollection = db.collection("users")
-  const systemAnnouncementsCollection = db.collection("systemAnnouncements")
-  const systemTextMessagesCollection = db.collection("systemTextMessages")
-  const scheduledMessages = systemMessagesCollection
-    .where('status', '==', 'scheduled')
-    .get()
+// // periodically check for the new scheduled messages (every minute)
+// setInterval(() => {
+//   const systemMessagesCollection = db.collection("systemMessages")
+//   const usersCollection = db.collection("users")
+//   const systemAnnouncementsCollection = db.collection("systemAnnouncements")
+//   const systemTextMessagesCollection = db.collection("systemTextMessages")
+//   const scheduledMessages = systemMessagesCollection
+//     .where('status', '==', 'scheduled')
+//     .get()
 
-  if (!scheduledMessages.empty) {
-    scheduledMessages.docs.forEach(async (doc) => {
+//   if (!scheduledMessages.empty) {
+//     scheduledMessages.docs.forEach(async (doc) => {
 
-      const messageData = doc.data();
+//       const messageData = doc.data();
 
-      const date = messageData.date;
-      const time = messageData.time;
-      const timezoneOffset = new Date(messageData.createdAt.replace("at", "")).getTimezoneOffset()
+//       const date = messageData.date;
+//       const time = messageData.time;
+//       const timezoneOffset = new Date(messageData.createdAt.replace("at", "")).getTimezoneOffset()
 
-      const offset = timezoneOffset / 60;
-      var scheduleDate = new Date(date + ' ' + time + ':00')
-      scheduleDate.setHours(scheduleDate.getHours() - offset);
-      const currentDateTime = new Date()
+//       const offset = timezoneOffset / 60;
+//       var scheduleDate = new Date(date + ' ' + time + ':00')
+//       scheduleDate.setHours(scheduleDate.getHours() - offset);
+//       const currentDateTime = new Date()
 
-      if (scheduleDate.getTime() <= currentDateTime.getTime()) {
+//       if (scheduleDate.getTime() <= currentDateTime.getTime()) {
 
-        await updateDoc(doc, {
-          status: 'sent',
-          ...doc.data()
-        })
+//         await updateDoc(doc, {
+//           status: 'sent',
+//           ...doc.data()
+//         })
 
-        const customers = await usersCollection.where('receiveAnnouncements', '==', true).get();
-        if (!customers.empty) {
-          customers.docs.forEach(async (customerDoc) => {
-            const customerData = customerDoc.data();
+//         const customers = await usersCollection.where('receiveAnnouncements', '==', true).get();
+//         if (!customers.empty) {
+//           customers.docs.forEach(async (customerDoc) => {
+//             const customerData = customerDoc.data();
 
-            const userDocAnnouncementData = makeFormObject({
-              systemMessageId: messageData.id,
-              customerId: customerData.id,
-              message: messageData.message,
-              subject: messageData.subject,
-              status: 'un-read',
-              subject: messageData.subject
-            });
-            if (systemAnnouncementsCollection
-              .where('systemMessageId', '==', messageData.id)
-              .where('customerId', '==', customerData.id)
-              .get()
-              .empty) {
-              await systemAnnouncementsCollection.doc().set(userDocAnnouncementData)
-            }
+//             const userDocAnnouncementData = makeFormObject({
+//               systemMessageId: messageData.id,
+//               customerId: customerData.id,
+//               message: messageData.message,
+//               subject: messageData.subject,
+//               status: 'un-read',
+//               subject: messageData.subject
+//             });
+//             if (systemAnnouncementsCollection
+//               .where('systemMessageId', '==', messageData.id)
+//               .where('customerId', '==', customerData.id)
+//               .get()
+//               .empty) {
+//               await systemAnnouncementsCollection.doc().set(userDocAnnouncementData)
+//             }
 
-            const userDocTextData = makeFormObject({
-              systemMessageId: messageData.id,
-              customerId: customerData.id,
-              phone: customerData.phone,
-              message: messageData.message,
-              subject: messageData.subject,
-              status: 'sent'
-            });
-            if (systemTextMessagesCollection
-              .where('systemMessageId', '==', messageData.id)
-              .where('customerId', '==', customerData.id)
-              .get()
-              .empty) {
-              await systemTextMessagesCollection.doc().set(userDocTextData)
-            }
-          });
-        }
-      }
-    });
-  }
-}, 60000);
+//             const userDocTextData = makeFormObject({
+//               systemMessageId: messageData.id,
+//               customerId: customerData.id,
+//               phone: customerData.phone,
+//               message: messageData.message,
+//               subject: messageData.subject,
+//               status: 'sent'
+//             });
+//             if (systemTextMessagesCollection
+//               .where('systemMessageId', '==', messageData.id)
+//               .where('customerId', '==', customerData.id)
+//               .get()
+//               .empty) {
+//               await systemTextMessagesCollection.doc().set(userDocTextData)
+//             }
+//           });
+//         }
+//       }
+//     });
+//   }
+// }, 60000);
 
 // 08/25 planning to send sms from firebase trigger functions.
 // periodically send text messages (every minute)
@@ -1016,6 +1017,7 @@ app.post(
 );
 
 require("./controllers/email.controllers")(app, db, bodyParser);
+require("./webhook/herokuWebhook")(app);
 
 app.get("/migrateInternalCost", async (req, res) => {
   try {
@@ -1265,5 +1267,8 @@ app.post(
 );
 
 const listener = app.listen(process.env.PORT || 3000, function () {
-  console.log("Your app is listening on port " + listener.address().port);
+    console.log(
+    `🚀 Server running on port http://localhost:${listener.address().port}`
+  );
+
 });
