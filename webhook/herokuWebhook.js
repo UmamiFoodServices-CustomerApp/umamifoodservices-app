@@ -39,7 +39,7 @@ module.exports = (app) => {
 
         // Build message
         const message =
-          `*${environment} Deployment Report*\n\n` +
+          `*Backend ${environment} Deployment Report*\n\n` +
           `*App:* ${appName}\n` +
           `*Status:* ${statusEmoji}\n` +
           `*Triggered by:* ${userEmail}\n` +
