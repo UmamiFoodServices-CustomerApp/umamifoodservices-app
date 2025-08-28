@@ -50,4 +50,4 @@ Check [http://localhost:3000](http://localhost:3000) to view it in your postman.
 
 ### Linting & Formatting
 
-- Set up ESLint and Prettier for code consistency and formatting.
+- Set up ESLint and Prettier for code consistency and formatting..
