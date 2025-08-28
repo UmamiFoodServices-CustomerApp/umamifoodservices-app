@@ -9,7 +9,6 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const cors = require("cors");
 const { getAdminInviteEmail } = require("./emails/adminInvite");
 const fs = require("fs");
-const { updateDoc } = require("firebase/firestore");
 
 const firebaseAdmin = require("firebase-admin");
 
@@ -906,6 +905,7 @@ app.post(
 );
 
 require("./controllers/email.controllers")(app, db, bodyParser);
+require("./webhook/herokuWebhook")(app);
 
 app.post(
   "/update-user-email",
