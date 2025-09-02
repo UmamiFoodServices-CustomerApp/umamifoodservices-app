@@ -51,3 +51,6 @@ Check [http://localhost:3000](http://localhost:3000) to view it in your postman.
 ### Linting & Formatting
 
 - Set up ESLint and Prettier for code consistency and formatting.
+
+
+<!-- Security scan triggered at 2025-09-02 05:04:14 -->
