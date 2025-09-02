@@ -72,48 +72,6 @@ const defaultClient = new Client({
 
 const { paymentsApi, ordersApi, locationsApi, customersApi } = defaultClient;
 
-// DONOT REMOVE THIS - used to clear out old scheduled messages and announcements and set all customers to receive announcements
-// setTimeout(async () => {
-
-//   console.log('clearing out old scheduled messages and announcements')
-//   const scheduledMessages = await db.collection("systemMessages").get()
-//   console.log('deleting scheduled announcements')
-//   if (!scheduledMessages.empty) {
-//     scheduledMessages.docs.forEach(async (doc) => {
-//       await doc.ref.delete()
-//     });
-//   }
-
-//   const deleteAnnouncements = await db.collection("systemAnnouncements").get();
-//   console.log('deleting scheduled announcements for mobile')
-//   if (!deleteAnnouncements.empty) {
-//     deleteAnnouncements.docs.forEach(async (doc) => {
-//       await doc.ref.delete()
-//     });
-//   }
-
-//   const deleteTextMessages = await db.collection("systemTextMessages").get();
-//   console.log('deleting scheduled text messages announcements')
-//   if (!deleteTextMessages.empty) {
-//     deleteTextMessages.docs.forEach(async (doc) => {
-//       await doc.ref.delete()
-//     });
-//   }
-
-//   // update all customers to receive announcements (once when the server starts)
-//   const customers = await db.collection("users").get();
-//   console.log('setting all customers to receive announcements if not set already')
-//   if (!customers.empty) {
-//     customers.docs.forEach(async (doc) => {
-//       const customerData = doc.data();
-//       if (customerData.receiveAnnouncements === undefined) {
-//         const docRef = doc.ref
-//         await docRef.update({ receiveAnnouncements: true })
-//       }
-//     });
-//   }
-// }, 500);
-
 // periodically check for the new scheduled messages (every minute)
 setInterval(async () => {
   const systemMessagesCollection = db.collection("systemMessages")
@@ -131,7 +89,7 @@ setInterval(async () => {
       const timezoneOffset = new Date(date).getTimezoneOffset()
 
       const offset = timezoneOffset / 60;
-      var scheduleDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), ...time.split(':').map(t => parseInt(t)));
+      let scheduleDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), ...time.split(':').map(t => parseInt(t)));
       scheduleDate.setHours(scheduleDate.getHours() - offset);
       const currentDateTime = new Date()
 
@@ -153,8 +111,7 @@ setInterval(async () => {
               customerId: customerDoc.id,
               message: messageData.message,
               subject: messageData.subject,
-              status: 'un-read',
-              subject: messageData.subject
+              status: 'un-read'
             };
             const existingAnnouncements = await systemAnnouncementsCollection
               .where('systemMessageId', '==', doc.id)
@@ -189,29 +146,6 @@ setInterval(async () => {
     });
   }
 }, 60000);
-
-// 08/25 planning to send sms from firebase trigger functions.
-// periodically send text messages (every minute)
-// setInterval(() => {
-//   const systemTextMessagesCollection = db.collection("systemTextMessages")
-//   const scheduledTextMessages = systemTextMessagesCollection
-//     .where('status', '==', 'pending')
-//     .get()
-
-//   if (!scheduledTextMessages.empty) {
-//     scheduledTextMessages.docs.forEach(async (doc) => {
-//        update scheduled message to isQueued: yes
-//       await updateDoc(doc, {
-//         status: 'sent',
-//         ...doc.date()
-//       })
-
-//       const messageData = doc.data();
-//     });
-//   }
-// }, 60000);
-
-// DONOT DELETE ENDs HERE
 
 app.use(cors());
 
