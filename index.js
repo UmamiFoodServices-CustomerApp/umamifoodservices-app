@@ -216,6 +216,33 @@ setInterval(async () => {
 app.use(cors());
 
 app.post(
+  "/disable-customer",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (req, res) => {
+    const { id } = req.body;
+
+    try {
+      // Disable firebase customer user
+      await firebaseAdmin.auth().updateUser(id, {
+        disabled: true
+      })
+      .then(() => {
+        console.log('Successfully disabled user');
+      })
+      .catch((error) => {
+        console.error('Error disabling user:', error);
+      });
+
+      res.status(200).send("Customer disabled successfully.");
+    } catch (error) {
+      console.error("Error disabling user:", error);
+      res.status(500).send("Error occured please try again later.");
+    }
+  }
+);
+
+app.post(
   "/sendPasswordReset",
   bodyParser.urlencoded({ extended: false }),
   bodyParser.json(),
