@@ -928,6 +928,7 @@ app.post(
         zip: zipCode,
         businessName: fullName,
         receiveAnnouncements,
+        status: 'Active',
       });
 
       await db.collection("users").doc(user.uid).set(userDocData);
