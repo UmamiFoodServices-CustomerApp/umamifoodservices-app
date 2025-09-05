@@ -177,6 +177,33 @@ app.post(
 );
 
 app.post(
+  "/activate-customer",
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (req, res) => {
+    const { id } = req.body;
+
+    try {
+      // Activate firebase customer user
+      await firebaseAdmin.auth().updateUser(id, {
+        disabled: false
+      })
+        .then(() => {
+          console.log('Successfully activated user');
+        })
+        .catch((error) => {
+          console.error('Error activating user:', error);
+        });
+
+      res.status(200).send("Customer activated successfully.");
+    } catch (error) {
+      console.error("Error activating user:", error);
+      res.status(500).send("Error occured please try again later.");
+    }
+  }
+);
+
+app.post(
   "/sendPasswordReset",
   bodyParser.urlencoded({ extended: false }),
   bodyParser.json(),
