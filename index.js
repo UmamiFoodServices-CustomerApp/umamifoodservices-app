@@ -122,20 +122,34 @@ setInterval(async () => {
             }
 
             if (customerData.phone) {
-              const userDocTextData = {
-                systemMessageId: doc.id,
-                customerId: customerDoc.id,
-                phone: customerData.phone,
-                message: messageData.message,
-                subject: messageData.subject,
-                status: 'sent'
-              };
-              const existingTextMessage = await systemTextMessagesCollection
-                .where('systemMessageId', '==', doc.id)
-                .where('customerId', '==', customerDoc.id)
-                .get()
-              if (existingTextMessage.empty) {
-                await systemTextMessagesCollection.add(userDocTextData)
+              let customerPhoneNumber = customerData.phone
+              // replace all non-numeric characters
+              const cleanedNumber = customerPhoneNumber.replace(/[^\d]/g, "")
+              if (cleanedNumber.length === 11) {
+                customerPhoneNumber = "+" + cleanedNumber
+              } else if (cleanedNumber.length === 10 && !cleanedNumber.startsWith("1")) {
+                customerPhoneNumber = "+1" + cleanedNumber
+              } else {
+                customerPhoneNumber = null
+              }
+              if (customerPhoneNumber) {
+                const userDocTextData = {
+                  systemMessageId: doc.id,
+                  customerId: customerDoc.id,
+                  phone: customerData.phone,
+                  message: messageData.message,
+                  subject: messageData.subject,
+                  status: 'sent'
+                };
+                const existingTextMessage = await systemTextMessagesCollection
+                  .where('systemMessageId', '==', doc.id)
+                  .where('customerId', '==', customerDoc.id)
+                  .get()
+                if (existingTextMessage.empty) {
+                  await systemTextMessagesCollection.add(userDocTextData)
+                }
+              } else {
+                console.log('InvalidPhoneNumber', customerDoc.id, customerData.phone)
               }
             } else {
               console.log('customerPhoneDoesNotExist', customerDoc.id, customerData)
