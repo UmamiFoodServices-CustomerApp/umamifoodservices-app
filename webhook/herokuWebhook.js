@@ -1,8 +1,7 @@
 const bodyParser = require('body-parser')
 const moment = require('moment')
 
-const G_CHAT_WEBHOOK_URL =
-  'https://chat.googleapis.com/v1/spaces/AAAAjDz7VGs/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=TFKs3RHp9Txuw8ezlpnOoyWAJdU4d2b1vZFNdqEp3Yc'
+const G_CHAT_WEBHOOK_URL = process.env.G_CHAT_WEBHOOK_URL
 
 module.exports = (app) => {
   app.post(
