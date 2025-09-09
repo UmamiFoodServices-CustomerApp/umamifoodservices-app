@@ -22,7 +22,8 @@
     "pdfkit": "^0.13.0",
     "puppeteer": "24.9.0",
     "square": "7.0.0",
-    "stripe": "^10.5.0"
+    "stripe": "^10.5.0",
+    "twilio": "^3.48.2"
   },
   "keywords": [],
   "author": "",
