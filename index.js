@@ -139,7 +139,7 @@ setInterval(async () => {
                 const userDocTextData = {
                   systemMessageId: doc.id,
                   customerId: customerDoc.id,
-                  phone: customerData.phone,
+                  phone: customerPhoneNumber,
                   message: messageData.message,
                   subject: messageData.subject,
                   status: 'sent'
