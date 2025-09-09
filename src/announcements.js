@@ -2,20 +2,19 @@ const INTERVAL = 60 * 1000 // Check every minute
 
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN
-console.log({TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN})
+
 const twilioService = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 const sendAnnouncementTextToCustomer = (messageData) => {
-  console.log('sendAnnouncementTextToCustomer called with:', messageData)
   return new Promise((resolve, reject) => {
-    const twilioNumber = '+19092562565' // your twilio phone number
+    const twilioNumber = '+19092562565'
     const phoneNumber = messageData.phone
     const url = 'umami://UmamiAdmin'
 
     const textMessage = {
       body: `${messageData.message}.    ${url}`,
-      to: "+17143079992",
       from: twilioNumber,
+      to: phoneNumber,
     }
     twilioService.messages
       .create(textMessage)
@@ -31,11 +30,6 @@ const sendAnnouncementTextToCustomer = (messageData) => {
 }
 
 module.exports = ({ db }) => {
-    sendAnnouncementTextToCustomer({
-        phone: '+1234567890',
-        message: 'Test message, ignore',
-    })
-
   // periodically check for the new scheduled messages (every minute)
   setInterval(async () => {
     const systemMessagesCollection = db.collection('systemMessages')
