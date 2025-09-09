@@ -5,8 +5,8 @@ const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN
 
 const twilioService = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
-const sendAnnouncementTextToCustomer = (messageData) => {
-  return new Promise((resolve, reject) => {
+const sendAnnouncementTextToCustomer = async (messageData) => {
+  try {
     const twilioNumber = '+19092562565'
     const phoneNumber = messageData.phone
     const url = 'umami://UmamiAdmin'
@@ -16,17 +16,13 @@ const sendAnnouncementTextToCustomer = (messageData) => {
       from: twilioNumber,
       to: phoneNumber,
     }
-    twilioService.messages
-      .create(textMessage)
-      .then((res) => {
-        console.log('sendAnnouncementTextToCustomer Twilio Success:', res)
-        resolve(res)
-      })
-      .catch((err) => {
-        console.log('sendAnnouncementTextToCustomer Twilio Error:', err)
-        reject(err)
-      })
-  })
+
+    const res = await twilioService.messages.create(textMessage)
+
+    console.log('sendAnnouncementTextToCustomer Twilio Success:', res)
+  } catch (error) {
+    console.log('sendAnnouncementTextToCustomer Error:', error)
+  }
 }
 
 module.exports = ({ db }) => {
