@@ -41,7 +41,9 @@ module.exports = ({ db }) => {
         const time = messageData.time + ':00'
         const timezoneOffset = new Date(date).getTimezoneOffset()
 
-        const offset = timezoneOffset / 60
+        const offset = messageData.userTimeZone
+          ? parseInt(messageData.userTimeZone.replace('UTC', ''))
+          : timezoneOffset / 60
         var scheduleDate = new Date(
           date.getFullYear(),
           date.getMonth(),
