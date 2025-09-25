@@ -25,6 +25,27 @@ const sendAnnouncementTextToCustomer = async (messageData) => {
   }
 }
 
+const getCurrentDateTime = () => {
+  const nowDate = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+  }).format(new Date());
+
+  const dateReplace = nowDate.replaceAll(',', '') + ' GMT-0700 (Pacific Daylight Time)'
+  return new Date(dateReplace).getTime()
+}
+
+const getScheduledDateTime = (date, time) => {
+  return new Date(`${date} ${time}:00  GMT-0700 (Pacific Daylight Time)`).getTime()
+}
+
 module.exports = ({ db }) => {
   // periodically check for the new scheduled messages (every minute)
   setInterval(async () => {
@@ -37,23 +58,8 @@ module.exports = ({ db }) => {
     if (!scheduledMessages.empty) {
       scheduledMessages.docs.forEach(async (doc) => {
         const messageData = doc.data()
-        const date = messageData.createdAt.toDate()
-        const time = messageData.time + ':00'
-        const timezoneOffset = new Date(date).getTimezoneOffset()
 
-        const offset = messageData.userTimeZone
-          ? parseInt(messageData.userTimeZone.replace('UTC', ''))
-          : timezoneOffset / 60
-        var scheduleDate = new Date(
-          date.getFullYear(),
-          date.getMonth(),
-          date.getDate(),
-          ...time.split(':').map((t) => parseInt(t))
-        )
-        scheduleDate.setHours(scheduleDate.getHours() - offset)
-        const currentDateTime = new Date()
-
-        if (scheduleDate.getTime() <= currentDateTime.getTime()) {
+        if (getScheduledDateTime(messageData.date, messageData.time) <= getCurrentDateTime()) {
           const docRef = doc.ref
           await docRef.update({
             ...doc.data(),
