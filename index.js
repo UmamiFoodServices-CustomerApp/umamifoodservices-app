@@ -136,18 +136,36 @@ app.post(
     const { email } = req.body;
 
     try {
+      const userDoc = await firebaseAdmin
+        .firestore()
+        .collection('users')
+        .where('email', '==', email)
+        .limit(1)
+        .get()
+
+      const userName = userDoc?.docs?.[0]?.data?.().name ?? ''
+
       // Generate password reset link
       const resetLink = await firebaseAdmin
         .auth()
         .generatePasswordResetLink(email);
 
       // Send email using Nodemailer
+      const subject = `${userName}, your requested password update`;
+
+      const htmlMessage = `
+        <p>Hello ${userName},</p>
+        <p>A request has been received to change the password for your Umami Food Services account.</p>
+        <p><a href="${resetLink}">Reset your password</a></p>
+        <p>If you didn’t ask to reset your password, you can ignore this email.</p>
+        <p>Thanks,<br/>Umami Food Services Team</p>
+      `;
+
       const mailOptions = {
         from: process.env.MAIL_FROM,
         to: email,
-        subject: "Password Reset",
-        text: `Click the following link to reset your password: ${resetLink}`,
-        html: `<p>Click the following link to reset your password: <a href="${resetLink}">${resetLink}</a></p>`,
+        subject,
+        html: htmlMessage,
       };
 
       await transporter.sendMail(mailOptions);
@@ -158,7 +176,7 @@ app.post(
       res.status(500).send("Error sending password reset email.");
     }
   }
-);
+)
 
 // TODO: bodyParser.urlencoded({ extended: false }), bodyParser.json() these functions are passing directly to the app.post() method. This is not a good practice. You should pass these functions to the app.use() method.
 // I can't pass use it in app.use() because I am using one more parser for this endpoint: `/email-stripe-invoice` and that's why I can't use two parsers.
