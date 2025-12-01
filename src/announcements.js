@@ -80,68 +80,77 @@ module.exports = ({ db }) => {
 
     console.log('Preparing to send scheduled messages if any')
 
-    if (!scheduledMessages.empty) {
-      scheduledMessages.docs.forEach(async (doc) => {
-        const messageData = doc.data()
-
-        if (
-          getScheduledDateTime(messageData.date, messageData.time) <=
-          getCurrentDateTime()
-        ) {
-          const docRef = doc.ref
-          await docRef.update({
-            ...doc.data(),
-            status: 'sent',
-          })
-
-          const customers = await usersCollection
-            .where('receiveAnnouncements', '==', true)
-            .get()
-
-          if (!customers.empty) {
-            customers.docs.forEach(async (customerDoc) => {
-              const customerData = customerDoc.data()
-
-              const userDocAnnouncementData = {
-                systemMessageId: doc.id,
-                customerId: customerDoc.id,
-                message: messageData.message,
-                subject: messageData.subject,
-                status: 'un-read',
-                subject: messageData.subject,
-              }
-              const existingAnnouncements = await systemAnnouncementsCollection
-                .where('systemMessageId', '==', doc.id)
-                .where('customerId', '==', customerDoc.id)
-                .get()
-              if (existingAnnouncements.empty) {
-                await systemAnnouncementsCollection.add(userDocAnnouncementData)
-              }
-
-              const customerPhoneNumber = getPhoneNumber(customerData)
-
-              if (customerPhoneNumber) {
-                const userDocTextData = {
-                  systemMessageId: doc.id,
-                  customerId: customerDoc.id,
-                  phone: customerPhoneNumber,
-                  message: messageData.message,
-                  subject: messageData.subject,
-                  status: 'sent',
-                }
-                const existingTextMessage = await systemTextMessagesCollection
-                  .where('systemMessageId', '==', doc.id)
-                  .where('customerId', '==', customerDoc.id)
-                  .get()
-                if (existingTextMessage.empty) {
-                  await systemTextMessagesCollection.add(userDocTextData)
-                  await sendAnnouncementTextToCustomer(userDocTextData)
-                }
-              }
-            })
-          }
-        }
-      })
+    if (scheduledMessages.empty) {
+      return
     }
+
+    scheduledMessages.docs.forEach(async (doc) => {
+      const messageData = doc.data()
+
+      if (
+        getScheduledDateTime(messageData.date, messageData.time) <=
+        getCurrentDateTime()
+      ) {
+        const docRef = doc.ref
+        await docRef.update({
+          ...doc.data(),
+          status: 'sent',
+        })
+
+        const snapshotCustomers = await usersCollection
+          .where('receiveAnnouncements', '==', true)
+          .get()
+
+        let customers = snapshotCustomers.docs.map((doc) => ({
+          id: doc.id,
+          data: doc.data(),
+        }))
+
+        if (messageData.isTestAnnouncements) {
+          const customerIds = messageData.testAnnouncementCustomers || []
+          customers = customers.filter((customer) =>
+            customerIds.includes(customer.id)
+          )
+        }
+
+        customers.forEach(async (customerDoc) => {
+          const customerData = customerDoc.data
+          const userDocAnnouncementData = {
+            systemMessageId: doc.id,
+            customerId: customerDoc.id,
+            message: messageData.message,
+            subject: messageData.subject,
+            status: 'un-read',
+            subject: messageData.subject,
+          }
+          const existingAnnouncements = await systemAnnouncementsCollection
+            .where('systemMessageId', '==', doc.id)
+            .where('customerId', '==', customerDoc.id)
+            .get()
+          if (existingAnnouncements.empty) {
+            await systemAnnouncementsCollection.add(userDocAnnouncementData)
+          }
+          const customerPhoneNumber = getPhoneNumber(customerData)
+          if (customerPhoneNumber) {
+            const userDocTextData = {
+              systemMessageId: doc.id,
+              customerId: customerDoc.id,
+              phone: customerPhoneNumber,
+              message: messageData.message,
+              subject: messageData.subject,
+              status: 'sent',
+            }
+            const existingTextMessage = await systemTextMessagesCollection
+              .where('systemMessageId', '==', doc.id)
+              .where('customerId', '==', customerDoc.id)
+              .get()
+            if (existingTextMessage.empty) {
+              await systemTextMessagesCollection.add(userDocTextData)
+              await sendAnnouncementTextToCustomer(userDocTextData)
+            }
+          }
+        })
+      }
+    })
   }, INTERVAL)
 }
