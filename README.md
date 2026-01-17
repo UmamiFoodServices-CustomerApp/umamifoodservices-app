@@ -1,66 +1,35 @@
-# Umami Foodservices App
+Umami Food Services — Backend
 
-## Getting Started
+Short description
 
-### Prerequisites
+This repository contains the backend services for Umami Food Services. It provides HTTP endpoints, webhook handlers, email notifications and payment integrations.
 
-Before getting started, make sure you have the following installed:
+Prerequisites
 
-- Node.js 18 (Recommended LTS version)
-- npm (Node Package Manager) or Yarn
+- Node.js >= 20
+- Yarn (or npm)
+- Add a `.env` file with required environment variables
 
-### Installation
+Install
 
-1. Clone the repository:
+Install dependencies:
 
-```
-git clone https://{token}@github.com/begouravdev/umamifoodservices-app.git
-```
+    yarn install
 
-2. Navigate to the project directory:
+Running (development)
 
-```
-cd umamifoodservices-app
-```
+Start the server in development (uses `nodemon`):
 
-3. Install dependencies:
+    yarn start
 
-```bash
-npm install
-# or
-yarn install
-```
+Notes
 
-## Environment
+- The `start` script runs `nodemon index.js` (see `package.json`).
+- There are no tests configured in this repository (`yarn test` prints a placeholder message).
 
-Copy the example env file and make the required configuration changes in the .env file
+Deployment
 
-```
-cp .env.example .env
-```
-
-### Start
-
-In the project directory, you can run:
-
-### `npm start` or `yarn start`
-
-Runs the app in the development mode.\
-Check [http://localhost:3000](http://localhost:3000) to view it in your postman.
-
-### Linting & Formatting
-
-- Set up ESLint and Prettier for code consistency and formatting.
-
-
-<!-- Security scan triggered at 2025-09-02 05:04:14 -->
-
-<!-- Security scan triggered at 2025-09-02 06:35:41 -->
-
-<!-- Security scan triggered at 2025-09-09 05:49:45 -->
-
-<!-- Security scan triggered at 2025-09-09 05:52:56 -->
-
-<!-- Security scan triggered at 2025-09-28 15:59:13 -->
-
-<!-- Security scan triggered at 2025-09-28 16:02:43 -->
+- This project has been deployed to Heroku; CI/CD can be configured to auto-deploy on `master` and `staging` branches.
+- Example URLs used previously:
+  - Production: https://umami-foods.herokuapp.com
+  - Staging: https://umami-backend-staging-498a0ac23f8a.herokuapp.com
