@@ -33,3 +33,6 @@ Deployment
 - Example URLs used previously:
   - Production: https://umami-foods.herokuapp.com
   - Staging: https://umami-backend-staging-498a0ac23f8a.herokuapp.com
+
+Repository:
+https://github.com/UmamiFoodServices-CustomerApp/umamifoodservices-app
