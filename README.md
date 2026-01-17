@@ -1,38 +1,43 @@
-Umami Food Services — Backend
+# Umami Food Services — Backend
 
-Short description
+## Short description
 
 This repository contains the backend services for Umami Food Services. It provides HTTP endpoints, webhook handlers, email notifications and payment integrations.
 
-Prerequisites
+## Prerequisites
 
 - Node.js >= 20
 - Yarn (or npm)
-- Add a `.env` file with required environment variables
+- Create a `.env` file with required environment variables
 
-Install
+## Install
 
 Install dependencies:
 
-    yarn install
+```bash
+yarn install
+```
 
-Running (development)
+## Running (development)
 
 Start the server in development (uses `nodemon`):
 
-    yarn start
+```bash
+yarn start
+```
 
-Notes
+## Notes
 
 - The `start` script runs `nodemon index.js` (see `package.json`).
 - There are no tests configured in this repository (`yarn test` prints a placeholder message).
 
-Deployment
+## Deployment
 
 - This project has been deployed to Heroku; CI/CD can be configured to auto-deploy on `master` and `staging` branches.
 - Example URLs used previously:
   - Production: https://umami-foods.herokuapp.com
   - Staging: https://umami-backend-staging-498a0ac23f8a.herokuapp.com
 
-Repository:
+## Repository
+
 https://github.com/UmamiFoodServices-CustomerApp/umamifoodservices-app
