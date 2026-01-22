@@ -1,5 +1,4 @@
 const express = require("express");
-const nodemailer = require("nodemailer");
 const app = express();
 require("dotenv").config();
 const { Client, Environment } = require("square");
@@ -13,6 +12,7 @@ const fs = require("fs");
 const firebaseAdmin = require("firebase-admin");
 
 const { generatePdf } = require("./utils/order");
+const { sendMail } = require("./src/services/mail/mail.service")
 
 const serviceAccount = {
   type: "service_account",
@@ -35,17 +35,6 @@ firebaseAdmin.initializeApp({
 
 const db = firebaseAdmin.firestore();
 
-const creds = {
-  host: process.env.MAIL_HOST,
-  port: process.env.MAIL_PORT,
-  auth: {
-    user: process.env.MAIL_USERNAME,
-    pass: process.env.MAIL_PASSWORD,
-  },
-};
-
-const transporter = nodemailer.createTransport(creds);
-
 const path = require("path");
 const { generateStrongPassword, makeFormObject } = require("./utils/auth");
 const { getCustomerWelcomeEmail } = require("./emails/customerWelcome");
@@ -55,6 +44,7 @@ const {
 const {
   getCustomerSignupAdminWelcome,
 } = require("./emails/customerSignupAdminWelcome");
+const { getPasswordResetEmail } = require("./emails/passwordReset");
 
 // Define the file path
 const imagePath = path.join(__dirname, "images", "Logo.png");
@@ -150,25 +140,12 @@ app.post(
         .auth()
         .generatePasswordResetLink(email);
 
-      // Send email using Nodemailer
-      const subject = `${userName}, your requested password update`;
-
-      const htmlMessage = `
-        <p>Hello ${userName},</p>
-        <p>A request has been received to change the password for your Umami Food Services account.</p>
-        <p><a href="${resetLink}">Reset your password</a></p>
-        <p>If you didn’t ask to reset your password, you can ignore this email.</p>
-        <p>Thanks,<br/>Umami Food Services Team</p>
-      `;
-
-      const mailOptions = {
-        from: process.env.MAIL_FROM,
+      // Send password reset email
+      await sendMail({
         to: email,
-        subject,
-        html: htmlMessage,
-      };
-
-      await transporter.sendMail(mailOptions);
+        subject: `${userName}, your requested password update`,
+        html: getPasswordResetEmail({ userName, resetLink }),
+      });
 
       res.status(200).send("Password reset email sent successfully.");
     } catch (error) {
@@ -420,10 +397,9 @@ app.get(
         const extension = getFileExtension(formattedInvoiceUrl);
 
         let mailOptions = {
-          from: process.env.MAIL_FROM,
           to: email,
           subject: "Your Invoice",
-          text: "Please find your attached invoice.",
+          html: '<p>Please find your attached invoice.</p>',
           attachments: [
             {
               filename: `invoice.${extension}`,
@@ -432,7 +408,7 @@ app.get(
           ],
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendMail(mailOptions);
         return response.status(200).json({ status: true });
       }
 
@@ -461,10 +437,9 @@ app.get(
       }
 
       let mailOptions = {
-        from: process.env.MAIL_FROM,
         to: email,
         subject: "Your Invoice",
-        text: "Please find your attached invoice.",
+        html: '<p>Please find your attached invoice.</p>',
         attachments: [
           {
             filename: "invoice.pdf",
@@ -473,22 +448,13 @@ app.get(
         ],
       };
 
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error(error);
-          response.status(500).send({
-            errorMessage: "Email error; please try again;",
-          });
-        } else {
-          console.log("Email sent: " + info.response);
-          response.setHeader("Content-Type", "application/pdf");
-          response.setHeader(
-            "Content-Disposition",
-            "inline; filename=invoice.pdf"
-          );
-          response.send(pdfData);
-        }
-      });
+      await sendMail(mailOptions);
+      response.setHeader("Content-Type", "application/pdf");
+      response.setHeader(
+        "Content-Disposition",
+        "inline; filename=invoice.pdf"
+      );
+      response.send(pdfData);
     } catch (error) {
       console.error(error);
       response.status(500).send({
@@ -813,13 +779,12 @@ app.post(
         .generatePasswordResetLink(email);
 
       const mailOptions = {
-        from: process.env.MAIL_FROM,
         to: email,
         subject: "Welcome to Umami Food Services!",
         html: getAdminInviteEmail({ passwordLink: resetLink, name }),
       };
 
-      await transporter.sendMail(mailOptions);
+      await sendMail(mailOptions);
 
       res.send({ success: true });
     } catch (error) {
@@ -907,7 +872,6 @@ app.post(
         .generatePasswordResetLink(email);
 
       const mailOptions = {
-        from: process.env.MAIL_FROM,
         to: email,
         subject: "Welcome to Umami Food Services",
         html: getCustomerWelcomeEmail({
@@ -917,7 +881,7 @@ app.post(
         }),
       };
 
-      await transporter.sendMail(mailOptions);
+      await sendMail(mailOptions);
 
       res.send({ success: true });
     } catch (error) {
@@ -950,16 +914,14 @@ app.post(
 
       // Send Email to Customer
       const mailOptions = {
-        from: process.env.MAIL_FROM,
         to: email,
         subject: "Welcome to Umami Food Services",
         html: getCustomerSignupWelcomeEmail({ fullName: name }),
       };
-      await transporter.sendMail(mailOptions);
+      await sendMail(mailOptions);
 
       // Send Email to Admin
       const adminMailOptions = {
-        from: process.env.MAIL_FROM,
         to: "kennguyen.987@gmail.com",
         subject: "Welcome new user to Umami Food Services!",
         html: getCustomerSignupAdminWelcome({
@@ -968,7 +930,7 @@ app.post(
           userFullName: name,
         }),
       };
-      await transporter.sendMail(adminMailOptions);
+      await sendMail(adminMailOptions);
 
       res.send({ success: true });
     } catch (error) {
