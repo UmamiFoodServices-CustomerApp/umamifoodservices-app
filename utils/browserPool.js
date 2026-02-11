@@ -1,4 +1,32 @@
-const { default: puppeteer } = require("puppeteer");
+const { default: puppeteer } = require("puppeteer-core");
+
+function getLaunchOptions() {
+  const isProduction = true
+
+  const executablePath =
+    process.env.PUPPETEER_EXECUTABLE_PATH ||
+    process.env.CHROME_BIN ||
+    process.env.CHROME_PATH ||
+    (isProduction ? undefined : "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
+
+  return {
+    executablePath,
+    headless: "new",
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--disable-extensions",
+      "--disable-background-networking",
+      "--disable-background-timer-throttling",
+      "--disable-renderer-backgrounding",
+      "--disable-features=site-per-process",
+      "--single-process",
+      "--no-zygote"
+    ]
+  };
+}
 
 class BrowserPool {
   constructor(maxPoolSize = 2) {
@@ -17,14 +45,7 @@ class BrowserPool {
 
     this.initPromise = (async () => {
       try {
-        const browser = await puppeteer.launch({
-          args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-          ],
-          headless: true,
-        });
+        const browser = await puppeteer.launch(getLaunchOptions());
         this.browsers.push(browser);
         this.lastUsed.set(browser, Date.now());
         return browser;
@@ -55,14 +76,7 @@ class BrowserPool {
 
     // If all browsers are in use and we haven't reached the pool size limit, create a new one
     if (this.browsers.length < this.maxPoolSize) {
-      const browser = await puppeteer.launch({
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-        ],
-        headless: true,
-      });
+      const browser = await puppeteer.launch(getLaunchOptions());
 
       this.browsers.push(browser);
       this.inUse.set(browser, true);

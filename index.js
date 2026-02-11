@@ -458,7 +458,7 @@ app.get(
     } catch (error) {
       console.error(error);
       response.status(500).send({
-        errorMessage: "PDF error; please try again;",
+        errorMessage: error?.message ?? "PDF error; please try again;",
         error,
       });
     }
