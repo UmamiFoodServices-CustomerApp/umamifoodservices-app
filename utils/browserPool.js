@@ -3,12 +3,17 @@ const { default: puppeteer } = require("puppeteer-core");
 function getLaunchOptions() {
   const isProduction = true
 
-  const executablePath =
-    process.env.PUPPETEER_EXECUTABLE_PATH ||
-    process.env.CHROME_BIN ||
-    process.env.CHROME_PATH ||
-    (isProduction ? undefined : "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome");
+  let executablePath;
 
+  if (isProduction) {
+    executablePath =
+      process.env.CHROME_BIN ||
+      "/app/.apt/usr/bin/google-chrome";
+  } else {
+    executablePath =
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  }
+  
   return {
     executablePath,
     headless: "new",
