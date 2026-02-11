@@ -761,39 +761,88 @@ app.post(
 );
 
 app.post(
-  "/send-admin-invite",
+  '/create-admin-user',
+  bodyParser.urlencoded({ extended: false }),
+  bodyParser.json(),
+  async (req, res) => {
+    try {
+      const { setPasswordPageUrl, ...data } = req.body
+
+      const email = req.body?.email
+
+      if (!email) {
+        res.status(400).send({
+          errorMessage: 'email is required',
+        })
+        return
+      }
+
+      const userRecord = await firebaseAdmin.auth().createUser({
+        email,
+        password: email,
+      })
+
+      await db
+        .collection('users')
+        .doc(userRecord.uid)
+        .set({
+          ...data,
+          isAdminUser: true,
+          status: false,
+          email_verified: false,
+          isDeleted: false,
+          timestampCreated:
+            firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+          timestampUpdated:
+            firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+        })
+
+      const fullName = `${data.firstName} ${data.lastName}`
+      const passwordLink = `${setPasswordPageUrl}?email=${encodeURIComponent(email)}&uid=${userRecord.uid}`
+
+      const mailOptions = {
+        to: email,
+        subject: 'Welcome to Umami Food Services!',
+        html: getAdminInviteEmail({ passwordLink, name: fullName }),
+      }
+
+      await sendMail(mailOptions)
+
+      res.send({ success: true })
+    } catch (error) {
+      res.status(500).send({
+        errorMessage: error?.message,
+      })
+    }
+  },
+)
+
+app.post(
+  '/delete-admin-user',
   bodyParser.urlencoded({ extended: false }),
   bodyParser.json(),
   async (request, res) => {
     try {
-      const { name, email } = request.body;
-      if (!name || !email) {
-        res.status(400).send({
-          errorMessage: "email and name is required",
-        });
-        return;
+      const { uid } = request.body
+
+      if (!uid) {
+        return res.status(400).send({ errorMessage: 'UID is required' })
       }
 
-      const resetLink = await firebaseAdmin
-        .auth()
-        .generatePasswordResetLink(email);
+      // 1️⃣ Delete Auth user
+      await firebaseAdmin.auth().deleteUser(uid)
 
-      const mailOptions = {
-        to: email,
-        subject: "Welcome to Umami Food Services!",
-        html: getAdminInviteEmail({ passwordLink: resetLink, name }),
-      };
+      // 2️⃣ Delete Firestore document
+      await db.collection('users').doc(uid).delete()
 
-      await sendMail(mailOptions);
-
-      res.send({ success: true });
+      res.send({ success: true })
     } catch (error) {
       res.status(500).send({
         errorMessage: error?.message,
-      });
+      })
     }
-  }
-);
+  },
+)
 
 // When adding customer from admin portal
 app.post(
