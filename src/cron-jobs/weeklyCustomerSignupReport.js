@@ -11,6 +11,11 @@ const {
 } = require('../../emails/weeklyCustomerSignupReport')
 
 // -----------------------------
+// Admin Email
+// -----------------------------
+const ADMIN_EMAIL = 'Kbtranspacfictrading@gmail.com'
+
+// -----------------------------
 // Firebase Init
 // -----------------------------
 const serviceAccount = {
@@ -55,12 +60,6 @@ const getLastWeekRange = () => {
     end: lastWeekSunday.endOf('day'),
   }
 }
-
-// -----------------------------
-// Admin Email
-// -----------------------------
-// const ADMIN_EMAIL = 'Kbtranspacfictrading@gmail.com'
-const ADMIN_EMAIL = 'gourav@tepia.co'
 
 // -----------------------------
 // Main Job
