@@ -42,3 +42,9 @@ yarn start
 
 https://github.com/UmamiFoodServices-CustomerApp/umamifoodservices-app
 .
+
+# Cron Jobs
+
+#### Run Weekly New Customer Signup Report Every Week Monday at 9:00 AM
+
+`node src/cron-jobs/weeklyCustomerSignupReport.js`
