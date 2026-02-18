@@ -11,9 +11,12 @@ const {
 } = require('../../emails/weeklyCustomerSignupReport')
 
 // -----------------------------
-// Admin Email
+// Admin Emails
 // -----------------------------
-const ADMIN_EMAIL = 'Kbtranspacfictrading@gmail.com'
+const ADMIN_EMAILS = [
+  'Kbtranspacfictrading@gmail.com',
+  'khuongkbtranspacific@gmail.com',
+]
 
 // -----------------------------
 // Firebase Init
@@ -132,7 +135,7 @@ const runWeeklySignupReport = async () => {
     )}-to-${end.format('YYYY-MM-DD')}.csv`
 
     const mailOptions = {
-      to: ADMIN_EMAIL,
+      to: ADMIN_EMAILS,
       subject: `Weekly New Customer Signup Report`,
       html: weeklyCustomerSignupReportEmail({
         start,
@@ -144,6 +147,7 @@ const runWeeklySignupReport = async () => {
         {
           filename: fileName,
           content: csv,
+          contentType: 'text/csv',
         },
       ],
     }
@@ -158,7 +162,7 @@ const runWeeklySignupReport = async () => {
       const errorTime = moment.utc().format('MMMM DD, YYYY hh:mm A') + ' UTC'
 
       await sendMail({
-        to: ADMIN_EMAIL,
+        to: ADMIN_EMAILS,
         subject: '❌ Weekly Customer Signup Report FAILED',
         html: weeklyCustomerSignupReportFailedEmail({ error, errorTime }),
       })
