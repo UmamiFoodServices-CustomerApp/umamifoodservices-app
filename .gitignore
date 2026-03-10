@@ -1,3 +1,8 @@
 .env
 node_modules
-.cache
+.cache.gitignore
+
+# Ignore batch script
+temp_auto_push.bat
+
+# Ignore VS Code settings folder
