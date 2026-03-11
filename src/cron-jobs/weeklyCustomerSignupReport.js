@@ -71,18 +71,24 @@ const getLastWeekRange = () => {
 // -----------------------------
 const runWeeklySignupReport = async () => {
   try {
-    console.log('Starting Weekly Customer Signup Report Job...')
+    console.log(
+      '[WeeklySignupReport] Starting Weekly Customer Signup Report Job...',
+    )
 
     // Only run on Thursday (UTC)
     const today = moment.utc().day()
     if (today !== 4) {
-      console.log('Not Thursday. Skipping weekly customer signup report job.')
+      console.log(
+        '[WeeklySignupReport] Not Thursday. Skipping weekly customer signup report job.',
+      )
       return
     }
 
     const { start, end } = getLastWeekRange()
 
-    console.log(`Fetching customers from ${start.format()} to ${end.format()}`)
+    console.log(
+      `[WeeklySignupReport] Fetching customers from ${start.format()} to ${end.format()}`,
+    )
 
     const snapshot = await db
       .collection('users')
@@ -156,9 +162,14 @@ const runWeeklySignupReport = async () => {
 
     await sendMail(mailOptions)
 
-    console.log('Weekly customer signup report sent successfully.')
+    console.log(
+      '[WeeklySignupReport]Weekly customer signup report sent successfully.',
+    )
   } catch (error) {
-    console.error('Error running weekly customer signup report job:', error)
+    console.log(
+      '[WeeklySignupReport] Error running weekly customer signup report job:',
+      error,
+    )
 
     try {
       const errorTime = moment.utc().format('MMMM DD, YYYY hh:mm A') + ' UTC'
@@ -169,9 +180,12 @@ const runWeeklySignupReport = async () => {
         html: weeklyCustomerSignupReportFailedEmail({ error, errorTime }),
       })
 
-      console.log('Failure notification email sent.')
+      console.log('[WeeklySignupReport] Failure notification email sent.')
     } catch (emailError) {
-      console.error('Failed to send failure notification email:', emailError)
+      console.log(
+        '[WeeklySignupReport] Failed to send failure notification email:',
+        emailError,
+      )
     }
   }
 }
