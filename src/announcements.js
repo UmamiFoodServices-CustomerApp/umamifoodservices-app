@@ -45,7 +45,7 @@ const getCurrentDateTime = () => {
 
 const getScheduledDateTime = (date, time) => {
   return new Date(
-    `${date} ${time}:00  GMT-0700 (Pacific Daylight Time)`
+    `${date} ${time}:00  GMT-0700 (Pacific Daylight Time)`,
   ).getTime()
 }
 
@@ -78,8 +78,6 @@ module.exports = ({ db }) => {
     const systemTextMessagesCollection = db.collection('systemTextMessages')
     const scheduledMessages = await systemMessagesCollection.get()
 
-    console.log('Preparing to send scheduled messages if any')
-
     if (scheduledMessages.empty) {
       return
     }
@@ -109,7 +107,7 @@ module.exports = ({ db }) => {
         if (messageData.isTestAnnouncements) {
           const customerIds = messageData.testAnnouncementCustomers || []
           customers = customers.filter((customer) =>
-            customerIds.includes(customer.id)
+            customerIds.includes(customer.id),
           )
         }
 

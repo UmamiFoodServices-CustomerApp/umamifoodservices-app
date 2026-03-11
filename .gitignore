@@ -7,3 +7,4 @@ temp_auto_push.bat
 
 # Ignore VS Code settings folder
 .vscode/
+temp_interactive_push.bat
