@@ -16,6 +16,8 @@ const {
 const ADMIN_EMAILS = [
   'Kbtranspacfictrading@gmail.com',
   'khuongkbtranspacific@gmail.com',
+  'kavya@tepia.co',
+  'gourav@tepia.co',
 ]
 
 // -----------------------------
@@ -71,10 +73,10 @@ const runWeeklySignupReport = async () => {
   try {
     console.log('Starting Weekly Customer Signup Report Job...')
 
-    // Only run on Monday (UTC)
+    // Only run on Thursday (UTC)
     const today = moment.utc().day()
-    if (today !== 1) {
-      console.log('Not Monday. Skipping weekly customer signup report job.')
+    if (today !== 4) {
+      console.log('Not Thursday. Skipping weekly customer signup report job.')
       return
     }
 
