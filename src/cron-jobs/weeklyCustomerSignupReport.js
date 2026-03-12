@@ -21,6 +21,8 @@ const ADMIN_EMAILS = [
   'gourav@tepia.co',
 ]
 
+const FAILURE_NOTIFICATION_ADMIN_EMAILS = ['kavya@tepia.co', 'gourav@tepia.co']
+
 // -----------------------------
 // Get Last Week Range (UTC)
 // Monday 00:00 → Sunday 23:59
@@ -173,7 +175,7 @@ module.exports = ({ db }) => {
         const errorTime = moment.utc().format('MMMM DD, YYYY hh:mm A') + ' UTC'
 
         await sendMail({
-          to: ADMIN_EMAILS,
+          to: FAILURE_NOTIFICATION_ADMIN_EMAILS,
           subject: '❌ Weekly Customer Signup Report FAILED',
           html: weeklyCustomerSignupReportFailedEmail({ error, errorTime }),
         })
