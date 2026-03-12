@@ -992,7 +992,8 @@ app.post(
 
 require("./controllers/email.controllers")(app, db, bodyParser);
 require("./webhook/herokuWebhook")(app);
-require("./src/announcements")({db});
+require("./src/cron-jobs/announcements")({db});
+require("./src/cron-jobs/weeklyCustomerSignupReport")({db});
 
 app.post(
   "/update-user-email",
