@@ -15,7 +15,7 @@ const INTERVAL = 20 * 60 * 1000 // Check every 20 minutes
 // Admin Emails
 // -----------------------------
 const ADMIN_EMAILS = [
-  'Kbtranspacfictrading@gmail.com',
+  'Kbtranspacifictrading@gmail.com',
   'khuongkbtranspacific@gmail.com',
   'kavya@tepia.co',
   'gourav@tepia.co',
