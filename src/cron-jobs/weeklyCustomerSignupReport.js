@@ -9,15 +9,15 @@ const {
   weeklyCustomerSignupReportEmail,
 } = require('../../emails/weeklyCustomerSignupReport')
 
-const INTERVAL = 10 * 60 * 1000 // Check every 10 minutes
+const INTERVAL = 20 * 60 * 1000 // Check every 20 minutes
 
 // -----------------------------
 // Admin Emails
 // -----------------------------
 const ADMIN_EMAILS = [
-  // 'Kbtranspacfictrading@gmail.com',
-  // 'khuongkbtranspacific@gmail.com',
-  // 'kavya@tepia.co',
+  'Kbtranspacfictrading@gmail.com',
+  'khuongkbtranspacific@gmail.com',
+  'kavya@tepia.co',
   'gourav@tepia.co',
 ]
 
@@ -52,19 +52,15 @@ module.exports = ({ db }) => {
       // Only run on Monday (UTC)
       const today = moment.utc()
 
-      // if (today.day() !== 1) {
-      //   console.log(
-      //     '[WeeklySignupReport] Not Monday. Skipping weekly customer signup report job.',
-      //   )
-      //   return
-      // }
+      if (today.isoWeekday() !== 1) {
+        return
+      }
 
       const weekKey = today.startOf('isoWeek').format('YYYY-MM-DD')
       const lockRef = db.collection('cronLocks').doc('weeklySignupReport')
-      const doc = await lockRef?.get?.()
+      const doc = await lockRef.get()
 
       if (doc.exists && doc.data().lastRunWeek === weekKey) {
-        console.log('[WeeklySignupReport] Already executed this week')
         return
       }
 
