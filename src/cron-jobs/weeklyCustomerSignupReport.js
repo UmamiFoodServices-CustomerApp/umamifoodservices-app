@@ -163,7 +163,7 @@ const runWeeklySignupReport = async () => {
     await sendMail(mailOptions)
 
     console.log(
-      '[WeeklySignupReport]Weekly customer signup report sent successfully.',
+      '[WeeklySignupReport] Weekly customer signup report sent successfully.',
     )
   } catch (error) {
     console.log(
