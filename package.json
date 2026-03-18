@@ -8,6 +8,7 @@
     "start": "nodemon index.js"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "aws-sdk": "^2.1677.0",
     "body-parser": "^1.18.3",
     "cors": "^2.8.5",
@@ -16,11 +17,13 @@
     "firebase": "^10.6.0",
     "firebase-admin": "^12.3.0",
     "grant-express": "^4.2.2",
+    "json2csv": "^6.0.0-alpha.2",
     "moment": "^2.30.1",
+    "moment-timezone": "^0.6.0",
     "nodemailer": "^6.9.14",
     "nodemon": "^3.0.1",
     "pdfkit": "^0.13.0",
-    "puppeteer": "24.9.0",
+    "puppeteer-core": "^24.37.2",
     "square": "7.0.0",
     "stripe": "^10.5.0",
     "twilio": "^3.48.2"

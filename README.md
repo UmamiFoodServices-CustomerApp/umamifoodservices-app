@@ -1,53 +1,50 @@
-# Umami Foodservices App
+# Umami Food Services — Backend
 
-## Getting Started
+## Short description
 
-### Prerequisites
+This repository contains the backend services for Umami Food Services. It provides HTTP endpoints, webhook handlers, email notifications and payment integrations.
 
-Before getting started, make sure you have the following installed:
+## Prerequisites
 
-- Node.js 18 (Recommended LTS version)
-- npm (Node Package Manager) or Yarn
+- Node.js >= 20
+- Yarn (or npm)
+- Create a `.env` file with required environment variables
 
-### Installation
+## Install
 
-1. Clone the repository:
-
-```
-git clone https://{token}@github.com/begouravdev/umamifoodservices-app.git
-```
-
-2. Navigate to the project directory:
-
-```
-cd umamifoodservices-app
-```
-
-3. Install dependencies:
+Install dependencies:
 
 ```bash
-npm install
-# or
 yarn install
 ```
 
-## Environment
+## Running (development)
 
-Copy the example env file and make the required configuration changes in the .env file
+Start the server in development (uses `nodemon`):
 
+```bash
+yarn start
 ```
-cp .env.example .env
-```
 
-### Start
+## Notes
 
-In the project directory, you can run:
+- The `start` script runs `nodemon index.js` (see `package.json`).
+- There are no tests configured in this repository (`yarn test` prints a placeholder message).
 
-### `npm start` or `yarn start`
+## Deployment
 
-Runs the app in the development mode.\
-Check [http://localhost:3000](http://localhost:3000) to view it in your postman.
+- This project has been deployed to Heroku; CI/CD can be configured to auto-deploy on `master` and `staging` branches.
+- Example URLs used previously:
+  - Production: https://umami-foods.herokuapp.com
+  - Staging: https://umami-backend-staging-498a0ac23f8a.herokuapp.com
 
-### Linting & Formatting
+## Repository
 
-- Set up ESLint and Prettier for code consistency and formatting.
+https://github.com/UmamiFoodServices-CustomerApp/umamifoodservices-app
+.
+
+# Cron Jobs
+
+#### Run Weekly New Customer Signup Report Every Week Monday at 9:00 AM
+
+`node src/cron-jobs/weeklyCustomerSignupReport.js`
